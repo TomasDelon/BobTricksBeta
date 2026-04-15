@@ -2,6 +2,12 @@
 
 ## 0. Objeto del documento
 
+$x$
+
+$$
+x
+$$
+
 Este documento fija las decisiones científicas y matemáticas de más alto nivel del proyecto **BobTricksBeta**. El objetivo no es todavía escribir el protocolo completo de marcha, carrera, salto y aterrizaje, sino fijar con rigor:
 
 1. qué objetos geométricos y dinámicos existen;
