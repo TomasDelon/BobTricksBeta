@@ -17,8 +17,6 @@ Los documentos de trabajo actualmente alineados con la dirección fuerte del pro
 - `docs/11_stand_walk_transition_and_step_trigger.md`
 - `docs/12_foothold_planner_under_support_framework.md`
 
-Además, `docs/` todavía contiene variantes heredadas `00_overview_v2.md`, `00_overview_v3.md` y `00_overview_v4.md`, que permanecen fuera de `trash` hasta una auditoría específica.
-
 ## Estado de `docs_clean/`
 
 Documentos relativamente más estables dentro de `docs_clean/`:

@@ -19,6 +19,9 @@ Los siguientes documentos fueron movidos desde `docs/` a `docs/trash/` por haber
 - `docs/trash/04_swing_generator.md`
 - `docs/trash/05_body_reconstruction.md`
 - `docs/trash/06_run_protocol.md`
+- `docs/trash/00_overview_v2.md`
+- `docs/trash/00_overview_v3.md`
+- `docs/trash/00_overview_v4.md`
 
 El movimiento se hizo de forma trazable, preservando contenido e historial mediante renames.
 
@@ -72,4 +75,3 @@ Documentos prioritarios para reescritura o consolidación futura:
 
 - Esta reorganización no reescribe teoría ni introduce teoría nueva.
 - `docs_clean/` no fue enviado a `trash`.
-- Las variantes `docs/00_overview_v2.md`, `docs/00_overview_v3.md` y `docs/00_overview_v4.md` permanecen en `docs/` fuera de esta auditoría, a la espera de clasificación posterior.
