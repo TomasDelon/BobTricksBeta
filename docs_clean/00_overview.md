@@ -36,7 +36,11 @@ At the present stage, it already contains the main mathematical backbone:
 - `docs_clean/07_prediction_layer.md`
 - `docs_clean/08_auxiliary_variables.md`
 
-However, not all of these files are equally up to date relative to the newest support-centered decisions.
+Most of these files are now reasonably aligned with the support-centered direction of the project.
+
+The clean line should therefore no longer be read as mostly legacy material waiting for rewrite.
+
+It should be read as a largely coherent canonical backbone that still leaves some open consolidation work on higher-level transitions, jump, landing, and future refinements.
 
 ### 1.2. `docs/`
 
@@ -54,6 +58,14 @@ These files are not yet the final clean line, but they express the most recent p
 ### 1.3. `docs/trash/`
 
 This folder stores displaced documents that were moved out of the active line for clarity, while preserving content and traceability.
+
+## 1.1. Current alignment of `docs_clean/`
+
+Most of these files are now reasonably aligned with the support-centered direction of the project.
+
+The clean line should therefore no longer be read as mostly legacy material waiting for rewrite.
+
+It should be read as a largely coherent canonical backbone that still leaves some open consolidation work on higher-level transitions, jump, landing, and future refinements.
 
 ## 2. Global principles
 
@@ -314,16 +326,16 @@ The clean line now already contains a prediction layer and an auxiliary-variable
 - the transfer variable $\beta$,
 - the reactive intensity $\rho$.
 
-However, the newer working documents in `docs/09`–`12` refine the interpretation of these variables further, especially for:
+The newer working documents in `docs/09`–`12` were the source of several support-centered refinements that have now largely been merged back into the clean line, especially for:
 
 - small positive heel length,
 - support-path-based definition of $Q$,
 - bilateral standing,
 - gait initiation,
 - finite load acceptance,
-- support acquisition planning.
+- support-acquisition planning.
 
-Those refinements must later be consolidated back into the clean line.
+Those working documents should still be treated as the live design reference when a newer project-level decision has not yet been canonically restated in `docs_clean/`.
 
 ## 10. Canonical document responsibilities
 
@@ -468,13 +480,14 @@ The following change with gait:
 
 ## 12. Present consolidation status
 
-The current situation is therefore the following.
+The current situation is now the following.
 
-- The clean line already contains the whole intended document skeleton.
-- The active working line in `docs/09`–`12` contains newer support-centered decisions that still need to be merged back into the clean line.
-- The next major clean consolidations should focus on geometry, walking, foothold planning, swing, and the interaction between prediction and support variables.
+- The clean line contains a mostly coherent backbone from overview and geometry through walk, planner, swing, reconstruction, run, prediction, and auxiliary variables.
+- The active working line in `docs/09`–`12` remains the live source for the strongest recent support-centered decisions and for future extensions not yet fully closed in the clean line.
+- The next major clean consolidations should no longer focus on basic support geometry or on basic walking structure, which are now largely aligned.
+- The next major clean consolidations should instead focus on higher-level protocol extensions such as walk-to-run transition, run-to-walk transition, jump, landing, and higher-energy capture.
 
-This overview intentionally records that status rather than pretending that all specialized clean files are already fully synchronized.
+This overview intentionally records that status rather than pretending that the project is already fully closed.
 
 ## 13. Main conclusion
 
@@ -499,3 +512,5 @@ $$
 $$
 
 Everything else must remain compatible with this order.
+
+At the present stage, this backbone is already much closer to a coherent canonical line than to a preliminary draft skeleton.
