@@ -2,32 +2,32 @@
 
 ## 0. Goal of this document
 
-The goal of this document is to define the mathematical prediction layer used by planning, swing realization, touchdown validation, and gait transitions.
+The goal of this document is to define the mathematical prediction layer used by planning, swing realization, touchdown validation, load-acceptance reasoning, and gait transitions.
 
 This document fixes:
 
 - the formal meaning of the prediction operator,
 - the relation between continuous dynamics and hybrid events,
-- the mode-dependent predictors for walking, running stance, and flight,
-- the distinction between state prediction and candidate-conditioned prediction,
-- the prediction outputs required by foothold planning,
-- the consistency conditions linking prediction to support geometry and swing realization.
+- the mode-dependent predictors for standing, gait initiation, walking, running stance, and flight,
+- the distinction between unconditional prediction and candidate-conditioned prediction,
+- the prediction outputs required by support-acquisition planning,
+- the consistency conditions linking prediction to support geometry, swing realization, and post-touchdown viability,
+- viability failure as a first-class prediction output.
 
 This document does not yet define the final numerical integrator or the final implementation-level optimization scheme. It defines the canonical mathematical object that later implementations must approximate.
 
 ## 1. Why a prediction layer is necessary
 
-The current architecture already contains:
+The architecture already contains:
 
 - an authoritative center of mass $C$,
-- mode-dependent locomotion dynamics,
-- a foothold planner,
+- support-centered geometry,
+- standing and walking hybrid modes,
+- a foothold planner understood as a support-acquisition planner,
 - a swing generator,
 - exact reconstruction constraints.
 
 However, these modules cannot be fully closed unless one can predict, from a current state, what the locomotion state will be at a future time and at future hybrid events.
-
-Therefore the architecture needs an explicit prediction layer.
 
 Without such a layer, expressions such as
 
@@ -37,7 +37,9 @@ $$
 
 remain only symbolic.
 
-## 2. Prediction as a mode-dependent hybrid flow
+Therefore the architecture needs an explicit prediction layer.
+
+## 2. Prediction as a hybrid mode-dependent flow
 
 ### 2.1. Locomotion state
 
@@ -52,14 +54,14 @@ This state contains at least the variables needed by the active protocol, includ
 - the authoritative CM state,
 - the torso state,
 - the active ankles,
-- the support objects when support exists,
+- the active support variables when support exists,
 - the swing state when swing exists,
 - the reactive intensity $\rho$,
 - the current hybrid mode $\mathcal{M}$.
 
 ### 2.2. Prediction operator
 
-The prediction operator is denoted by
+The unconditional prediction operator is denoted by
 
 $$
 \Pi(t; X_0).
@@ -68,12 +70,12 @@ $$
 Its meaning is:
 
 $$
-\Pi(t; X_0) = X(t)
+\Pi(t; X_0) = X(t),
 $$
 
 where $X(t)$ is the state reached after hybrid propagation of the locomotion model starting from initial state $X_0$.
 
-Thus $\Pi$ is not a purely continuous flow map. It is a hybrid prediction map.
+Thus $\Pi$ is not a purely continuous flow map. It is a hybrid prediction map obtained by alternating continuous propagation and event resets.
 
 ## 3. Continuous dynamics inside one mode
 
@@ -91,7 +93,50 @@ $$
 
 The exact expression of $u_{\mathcal{M}}$ depends on the current protocol.
 
-### 3.1. Walking single support
+### 3.1. Bilateral standing
+
+If
+
+$$
+\mathcal{M} = STAND_{LR},
+$$
+
+then the predictor uses the bilateral standing law
+
+$$
+\dot X = F_{STAND}(X).
+$$
+
+This includes at least:
+
+- the CM dynamics,
+- the torso evolution,
+- the bilateral support-allocation variable $\beta$,
+- the foot-specific support coordinates $\sigma_L$ and $\sigma_R$ when both feet are active.
+
+### 3.2. Gait initiation
+
+If
+
+$$
+\mathcal{M} \in \{GI_{L\to R}, GI_{R\to L}\},
+$$
+
+then the predictor uses the gait-initiation law
+
+$$
+\dot X = F_{GI}(X).
+$$
+
+This includes at least:
+
+- the CM dynamics,
+- the torso evolution,
+- bilateral support evolution,
+- the state-based or mixed law for $\beta$,
+- the support-state evolution that prepares unilateral-support readiness.
+
+### 3.3. Walking single support
 
 If
 
@@ -99,7 +144,7 @@ $$
 \mathcal{M} \in \{SS_L, SS_R\},
 $$
 
-then the predictor uses the walking single-support law:
+then the predictor uses the walking single-support law
 
 $$
 \dot X = F_{SS}(X).
@@ -109,31 +154,32 @@ This includes at least:
 
 - the CM dynamics,
 - the torso evolution,
-- the explicit evolution of the support rocker scalar $\sigma$,
-- the active swing progression law.
+- the active support-coordinate law $\sigma$,
+- the active swing evolution when a foot is in swing.
 
-### 3.2. Walking double support
+### 3.4. Walking load acceptance
 
 If
 
 $$
-\mathcal{M} \in \{DS_{L\to R}, DS_{R\to L}\},
+\mathcal{M} \in \{LA_{L\to R}, LA_{R\to L}\},
 $$
 
-then the predictor uses the double-support law:
+then the predictor uses the load-acceptance law
 
 $$
-\dot X = F_{DS}(X).
+\dot X = F_{LA}(X).
 $$
 
 This includes at least:
 
 - the CM dynamics,
 - the torso evolution,
-- the support-transfer scalar $\beta$,
-- the interpolated support objects.
+- the bilateral support-allocation law for $\beta$,
+- both active support paths,
+- the transfer from old support dominance toward new support dominance.
 
-### 3.3. Running stance
+### 3.5. Running stance
 
 If
 
@@ -141,7 +187,7 @@ $$
 \mathcal{M} \in \{RS_L, RS_R\},
 $$
 
-then the predictor uses the running stance law:
+then the predictor uses the running-stance law
 
 $$
 \dot X = F_{RS}(X).
@@ -151,10 +197,10 @@ This includes at least:
 
 - the CM dynamics,
 - the torso evolution,
-- the running support progression,
+- the running support progression law for $\sigma$,
 - the active swing evolution when applicable.
 
-### 3.4. Flight
+### 3.6. Flight
 
 If
 
@@ -192,15 +238,17 @@ $$
 
 for each relevant event label $e$.
 
-Typical events include:
+Typical events now include:
 
-- exit from single support,
-- completion of double support,
-- takeoff,
-- nominal touchdown,
+- standing-to-gait-initiation entry,
+- gait-initiation swing release,
+- single-support touchdown,
+- load-acceptance completion,
+- running takeoff,
+- flight touchdown,
 - early landing,
-- delayed landing entry,
-- forced viability failure.
+- delayed-landing entry,
+- viability failure.
 
 For each event label $e$, define the first event time by
 
@@ -208,7 +256,7 @@ $$
 t_e(X_0) = \inf\left\{ t > 0 : g_e\bigl(\Pi^{-}(t;X_0)\bigr) = 0 \text{ and all event-side conditions hold} \right\}.
 $$
 
-Here $\Pi^{-}$ denotes prediction just before the event reset.
+Here $\Pi^{-}$ denotes the prediction just before the event reset.
 
 ## 5. Reset maps at events
 
@@ -226,16 +274,17 @@ $$
 X^{+} = R_e(X^{-}).
 $$
 
-Examples:
+Examples include:
 
-- a new stance ankle becomes active,
-- support objects are redefined,
-- mode changes from $SS$ to $DS$,
-- mode changes from $FLIGHT$ to $RS$,
-- the swing target becomes realized,
-- support interpolation is initialized.
+- entering gait initiation from standing,
+- releasing the swing foot after unilateral-support readiness is reached,
+- activating a new foot contact at touchdown,
+- initializing load acceptance after touchdown,
+- making a new stance foot active after flight touchdown,
+- switching from running stance to flight,
+- returning a structured failure state.
 
-Therefore the hybrid prediction operator is obtained by alternating continuous propagation and reset maps.
+Therefore the hybrid prediction operator is obtained by concatenating mode-wise flows and reset maps.
 
 ## 6. Piecewise definition of the hybrid predictor
 
@@ -269,17 +318,17 @@ $$
 
 The same construction is then repeated from $X_1^{+}$.
 
-Thus the canonical predictor is a concatenation of mode-wise flows and event resets.
+Thus the canonical predictor is a concatenation of mode-wise continuous flows and event resets.
 
 ## 7. Candidate-conditioned prediction
 
-The generic prediction operator
+The unconditional prediction operator
 
 $$
 \Pi(t;X_0)
 $$
 
-is not always sufficient for planning, because some predictions depend on the candidate next foothold.
+is not always sufficient for planning, because some predictions depend on the candidate next support acquisition.
 
 Therefore planning requires a second object:
 
@@ -293,15 +342,13 @@ This candidate-conditioned predictor is the state obtained when:
 - the future foothold is provisionally fixed to $A_{\mathrm{next}}$,
 - the swing generator and support-transition logic are propagated consistently with that candidate.
 
-This distinction is essential.
-
 The unconditional predictor describes how the system evolves without committing to a specific future foothold.
 
 The candidate-conditioned predictor describes how the system evolves under the hypothesis that the future foothold is $A_{\mathrm{next}}$.
 
-The foothold planner needs the second one.
+The support-acquisition planner needs the second one.
 
-## 8. Predicted touchdown state
+## 8. Predicted touchdown and post-touchdown state
 
 For a candidate foothold $A_{\mathrm{next}}$, define the candidate touchdown time by
 
@@ -312,12 +359,10 @@ $$
 Then define the predicted touchdown state by
 
 $$
-X_{\mathrm{td}}(A_{\mathrm{next}})
-=
-\Pi\bigl(t_{\mathrm{td}}(A_{\mathrm{next}}); X_0, A_{\mathrm{next}}\bigr).
+X_{\mathrm{td}}(A_{\mathrm{next}}) = \Pi\bigl(t_{\mathrm{td}}(A_{\mathrm{next}}); X_0, A_{\mathrm{next}}\bigr).
 $$
 
-The minimum required outputs are:
+The minimum required outputs include:
 
 $$
 C_{\mathrm{td}}, \qquad \dot C_{\mathrm{td}}, \qquad \theta_{\mathrm{td}}, \qquad P_{\mathrm{td}}.
@@ -329,15 +374,20 @@ $$
 Q_{\mathrm{next}}, \qquad t_{\mathrm{sup,next}}, \qquad n_{\mathrm{sup,next}}, \qquad \sigma_{\mathrm{next}}.
 $$
 
-## 9. Prediction outputs required by foothold planning
+In walking-like cases, touchdown is not the end of the relevant prediction chain. One must also be able to predict a post-touchdown support-transfer phase.
+
+Thus a candidate-conditioned prediction may need to propagate not only to touchdown, but through a finite load-acceptance interval.
+
+## 9. Prediction outputs required by support-acquisition planning
 
 For each candidate foothold, the planner requires prediction outputs sufficient to evaluate:
 
 - rigid reachability,
 - local support coordinates,
-- XCoM-like capture quantities,
+- capture-related quantities,
 - touchdown timing,
-- touchdown viability.
+- touchdown viability,
+- post-touchdown load-acceptance viability.
 
 Therefore the prediction layer must provide at least:
 
@@ -361,17 +411,18 @@ $$
 \dot s_{A,\mathrm{next}} = \dot C_{\mathrm{td}} \cdot t_{\mathrm{sup,next}}.
 $$
 
-These are not independent quantities. They are outputs of the prediction layer composed with support-geometry construction.
+These are outputs of the prediction layer composed with future support-geometry construction.
 
 ## 10. Prediction consistency with support geometry
 
-The prediction layer must never predict only free CM variables while ignoring the geometric support objects required later by planning and reconstruction.
+The prediction layer must never predict only free CM variables while ignoring the support objects required later by planning and reconstruction.
 
-Therefore every candidate-conditioned prediction must remain consistent with the future support construction.
+Therefore every candidate-conditioned prediction must remain consistent with future support construction.
 
 This means that when a candidate foothold is given, the predictor must also determine:
 
 - whether the future foot geometry is admissible,
+- whether the future contact path exists,
 - whether the future support point exists,
 - whether the future support tangent and normal exist,
 - whether the touchdown frame is geometrically well defined.
@@ -385,13 +436,7 @@ The candidate-conditioned predictor must also remain consistent with the swing g
 Therefore the following chain must be well defined:
 
 $$
-A_{\mathrm{next}}
-\longrightarrow
-A_{\mathrm{sw}}(t)
-\longrightarrow
-t_{\mathrm{td}}(A_{\mathrm{next}})
-\longrightarrow
-X_{\mathrm{td}}(A_{\mathrm{next}}).
+A_{\mathrm{next}} \longrightarrow A_{\mathrm{sw}}(t) \longrightarrow t_{\mathrm{td}}(A_{\mathrm{next}}) \longrightarrow X_{\mathrm{td}}(A_{\mathrm{next}}).
 $$
 
 In particular:
@@ -399,11 +444,25 @@ In particular:
 1. the swing law must be able to target $A_{\mathrm{next}}$,
 2. the swing foot must remain admissible until touchdown or valid early landing,
 3. touchdown time must be determined by the swing-support interaction, not by an unrelated clock,
-4. the final touchdown state must be compatible with the future support geometry.
+4. the final touchdown state must be compatible with future support geometry.
 
 Thus prediction is not only about the CM. It is about the coupled future of support, swing, and state.
 
-## 12. Nominal and reactive prediction
+## 12. Prediction consistency with load acceptance
+
+In the current walking architecture, touchdown does not immediately imply new support dominance.
+
+Therefore candidate-conditioned prediction must remain compatible with the chain
+
+$$
+\text{touchdown} \to \text{load acceptance} \to \text{new support dominance}.
+$$
+
+A candidate-conditioned prediction that reaches touchdown but cannot propagate through a viable finite support-transfer phase is incomplete for walking support-acquisition planning.
+
+Thus prediction must be able to certify not only touchdown viability, but also load-acceptance viability when the active protocol requires it.
+
+## 13. Nominal and reactive prediction
 
 The prediction layer must depend continuously on the reactive intensity
 
@@ -415,12 +474,12 @@ This dependence may enter through:
 
 - support-law parameters,
 - stance-length targets,
-- support-transfer timing,
+- bilateral-support timing,
 - swing duration,
 - touchdown tolerances,
 - viability margins.
 
-Therefore the canonical predictor is more precisely written as
+Therefore the canonical predictor may be written more explicitly as
 
 $$
 \Pi(t; X_0, A_{\mathrm{next}}, \rho).
@@ -432,7 +491,7 @@ Under stronger perturbation, the same prediction layer remains valid but propaga
 
 This is critical because recovery must emerge from the same architecture rather than from a disconnected fallback predictor.
 
-## 13. Multi-stage prediction hierarchy
+## 14. Multi-stage prediction hierarchy
 
 The final implementation may use several prediction fidelities, but they must all approximate the same canonical object.
 
@@ -448,11 +507,11 @@ A hybrid predictor with explicit event detection and reset maps.
 
 ### Level 3
 
-A candidate-conditioned hybrid predictor coupled to swing realization and touchdown viability.
+A candidate-conditioned hybrid predictor coupled to swing realization, touchdown viability, and post-touchdown support viability.
 
 The clean documentation must define Level 3 as the canonical object, even if the first implementation temporarily uses a lower-order approximation.
 
-## 14. Admissible approximations
+## 15. Admissible approximations
 
 Approximation is acceptable only if the approximated predictor still preserves the logical dependencies of the exact architecture.
 
@@ -462,15 +521,13 @@ A reduced predictor is admissible only if:
 2. it preserves mode dependence,
 3. it preserves event dependence,
 4. it preserves candidate dependence when planning is involved,
-5. it does not silently discard a geometric constraint later assumed by planning or reconstruction.
-
-This condition is important.
+5. it does not silently discard a geometric or support-transition constraint later assumed by planning or reconstruction.
 
 A cheap predictor is allowed.
 
 A logically inconsistent predictor is not.
 
-## 15. Viability failure as a prediction outcome
+## 16. Viability failure as a prediction outcome
 
 Prediction must not assume success by default.
 
@@ -486,7 +543,7 @@ Typical failure cases are:
 
 Therefore the output of the prediction layer is not only a future state. It may also be a structured viability failure.
 
-Formally, the predictor should be understood as returning either:
+Formally, the predictor should be understood as returning either
 
 $$
 X_{\mathrm{pred}}
@@ -500,14 +557,16 @@ $$
 
 This prevents later modules from treating an undefined prediction as a valid state.
 
-## 16. Minimal event set for the current architecture
+## 17. Minimal event set for the current architecture
 
 At the present stage of the project, the minimal event set that the canonical predictor should support is:
 
-- $SS \to DS$,
-- $DS \to SS$,
-- $RS \to FLIGHT$,
-- $FLIGHT \to RS$,
+- $STAND_{LR} \to GI$ entry,
+- $GI \to SS$ swing-release event,
+- $SS \to LA$ touchdown event,
+- $LA \to SS$ support-dominance completion,
+- $RS \to FLIGHT$ takeoff,
+- $FLIGHT \to RS$ touchdown,
 - nominal swing touchdown,
 - early landing,
 - delayed-landing entry,
@@ -515,25 +574,20 @@ At the present stage of the project, the minimal event set that the canonical pr
 
 A later document may enlarge this set for jump and landing.
 
-## 17. Main conclusions of this document
+## 18. Main conclusions of this document
 
 1. The prediction operator must be a hybrid map, not only a continuous flow.
-2. Planning requires a candidate-conditioned prediction operator, not only an unconditional future state map.
+
+2. Planning requires a candidate-conditioned prediction operator, not only an unconditional future-state map.
+
 3. The predictor must propagate continuous dynamics, detect events, and apply reset maps.
+
 4. The touchdown state is an output of the predictor, not an external guess.
-5. Prediction must remain consistent with support geometry and swing realization.
+
+5. Prediction must remain consistent with support geometry, swing realization, and post-touchdown support logic.
+
 6. Prediction may return a structured failure, not only a state.
+
 7. Approximate predictors are acceptable only if they preserve the logical structure of the canonical hybrid predictor.
-8. This prediction layer is the mathematical bridge linking locomotion dynamics, foothold planning, swing realization, and mode transitions.
 
-## 18. What comes next
-
-The next clean document should make explicit the auxiliary mode-dependent variables that this prediction layer propagates.
-
-In particular, the next natural target is:
-
-- the rocker scalar $\sigma$,
-- the transfer scalar $\beta$,
-- the reactive intensity $\rho$,
-- their evolution laws,
-- their role in viability and prediction.
+8. This prediction layer is the mathematical bridge linking locomotion dynamics, support-acquisition planning, swing realization, and hybrid mode transitions.
