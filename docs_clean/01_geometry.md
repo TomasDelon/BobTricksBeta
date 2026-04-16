@@ -8,12 +8,12 @@ This document answers the following questions.
 
 - What exactly is the terrain from a mathematical point of view?
 - What exactly is a foot if the ankle is the reference point?
-- How do we define the visible direction of a foot that spans two terrain segments?
+- How do we define the visible direction of a foot on one or two terrain segments?
 - What exactly is the support point used by balance and CM dynamics?
 - Given a pelvis and an ankle, when does a rigid two-segment leg exist?
 - If it exists, how do we reconstruct the knee exactly?
 
-This document is purely geometric. It does not define the walking or running control laws themselves.
+This document is purely geometric. It does not define the walking, standing, or running control laws themselves.
 
 ## 1. Global conventions
 
@@ -163,19 +163,15 @@ $$
 \{A + \sigma f_{\mathrm{foot}} : \sigma \in [-L_{\mathrm{heel}}, L_{\mathrm{toe}}]\}.
 $$
 
-At the current stage of the project, the heel length is initialized to zero:
+At the current stage of the project, the heel length is assumed to be small but strictly positive:
 
 $$
-L_{\mathrm{heel}} = 0.
+0 < L_{\mathrm{heel}} \ll L.
 $$
 
-Therefore the implemented foot is
+This expresses the intended compromise of the project.
 
-$$
-\mathcal{F}(A, f_{\mathrm{foot}})
-=
-\{A + \sigma f_{\mathrm{foot}} : \sigma \in [0, L_{\mathrm{toe}}]\}.
-$$
+The ankle remains visually very close to the heel, but the support interval is no longer purely one-sided.
 
 ### 3.2. Facing compatibility
 
@@ -189,7 +185,7 @@ $$
 
 This prevents a visible foot from pointing backward relative to the character facing.
 
-## 4. One-segment stance contact
+## 4. One-segment visible foot geometry
 
 Suppose the ankle $A$ belongs to one terrain segment $S_i$, and the full foot can lie on that segment.
 
@@ -202,157 +198,164 @@ $$
 The visible toe point is
 
 $$
-T = A + L_{\mathrm{toe}} f_{\mathrm{foot}}.
+T_c = A + L_{\mathrm{toe}} f_{\mathrm{foot}}.
 $$
 
-The corresponding support frame is
+The visible heel point is
 
 $$
-t_{\mathrm{sup}} = f\, t_i,
+H_c = A - L_{\mathrm{heel}} f_{\mathrm{foot}}.
 $$
 
-$$
-n_{\mathrm{sup}} = (-t_{{\mathrm{sup}},y}, t_{{\mathrm{sup}},x}).
-$$
+## 5. Terrain-following foot path
 
-## 5. Two-segment visible foot geometry
+### 5.1. Need for a support path
 
-### 5.1. Forward terrain path from the ankle
+The visible foot direction is not sufficient to define support progression.
 
-Let the ankle $A$ lie on the terrain. Let the facing direction be $f$.
+The locomotion state needs a support point that can move continuously inside the active support interval, including on non-flat terrain and across admissible vertices.
 
-Define the forward terrain path starting at $A$ as the terrain arc-length parameterization in the facing direction:
+Therefore the support model must be based on a terrain-following contact path under the foot.
 
-$$
-\gamma_A(\sigma), \qquad \sigma \ge 0,
-$$
+### 5.2. Forward and backward terrain paths from the ankle
 
-with
+Let the ankle $A$ lie on the terrain and let the facing direction be $f$.
+
+Define the forward terrain path starting at $A$ by
 
 $$
-\gamma_A(0) = A.
-$$
-
-### 5.2. Effective toe point on the terrain path
-
-If the forward terrain path exists up to curvilinear distance $L_{\mathrm{toe}}$, define the terrain-based effective toe point by
-
-$$
-T_c = \gamma_A(L_{\mathrm{toe}}).
-$$
-
-### 5.3. Visible foot direction over two segments
-
-The visible direction of the foot is then defined by the mini-segment from ankle to toe:
-
-$$
-f_{\mathrm{foot}} = \frac{T_c - A}{\|T_c - A\|}.
-$$
-
-This is preferable to averaging segment angles directly because it comes from actual world points and varies continuously when the toe passes from one segment to the next.
-
-### 5.4. Why this is a weighted mean in practice
-
-Suppose the foot spans two consecutive segments with tangents $t_i$ and $t_{i+1}$.
-
-Let $\lambda_i$ be the terrain arc-length portion of the foot lying on $S_i$, and let $\lambda_{i+1}$ be the portion lying on $S_{i+1}$.
-
-Then
-
-$$
-\lambda_i + \lambda_{i+1} = L_{\mathrm{toe}}.
-$$
-
-The displacement from ankle to toe is
-
-$$
-T_c - A = f\,(\lambda_i t_i + \lambda_{i+1} t_{i+1}).
-$$
-
-Therefore
-
-$$
-f_{\mathrm{foot}}
-=
-\frac{f\,(\lambda_i t_i + \lambda_{i+1} t_{i+1})}{\|\lambda_i t_i + \lambda_{i+1} t_{i+1}\|}.
-$$
-
-So the visible foot direction is exactly the normalized weighted combination of the two segment tangents, with weights equal to the terrain arc-length portions covered by the foot.
-
-## 6. Admissibility of a two-segment foot
-
-A two-segment visible foot is admissible only if all the following hold.
-
-1. The terrain path from $A$ to $T_c$ crosses exactly one vertex.
-
-2. The terrain angle jump is bounded:
-
-$$
-\Delta \alpha = |\alpha_{i+1} - \alpha_i| \le \alpha_{\mathrm{foot}}^{\max}.
-$$
-
-3. The visible segment $[A,T_c]$ does not create a forbidden terrain crossing away from the intended support path.
-
-If any of these conditions fails, the foot must revert to a one-segment support model.
-
-## 7. Effective support point and effective support tangent
-
-### 7.1. Why the visible foot is not enough
-
-The visible foot direction is a rendering object.
-
-The CM dynamics and support logic need a point and a tangent representing where the support is effectively applied.
-
-Therefore we introduce an effective support point $Q$ and an effective support tangent $t_{\mathrm{sup}}$.
-
-### 7.2. One-segment support point
-
-If the foot lies on a single segment with tangent $t_i$, then
-
-$$
-t_{\mathrm{sup}} = f\, t_i,
-$$
-
-and the effective support point is
-
-$$
-Q = A + \sigma t_{\mathrm{sup}},
+\gamma_A^{+}(\sigma), \qquad \sigma \in [0, +\infty),
 $$
 
 with
 
 $$
-\sigma \in [0, L_{\mathrm{toe}}].
+\gamma_A^{+}(0) = A,
 $$
 
-### 7.3. Two-segment support weights
+and increasing in the facing direction.
 
-Suppose the foot spans two consecutive segments with terrain arc-length portions $\lambda_i$ and $\lambda_{i+1}$.
-
-Define normalized support weights
+Define the backward terrain path starting at $A$ by
 
 $$
-w_i = \frac{\lambda_i}{\lambda_i + \lambda_{i+1}},
+\gamma_A^{-}(\sigma), \qquad \sigma \in [0, +\infty),
 $$
 
-$$
-w_{i+1} = \frac{\lambda_{i+1}}{\lambda_i + \lambda_{i+1}}.
-$$
-
-Then
+with
 
 $$
-w_i + w_{i+1} = 1.
+\gamma_A^{-}(0) = A,
 $$
 
-### 7.4. Effective support tangent on two segments
+and increasing in the opposite terrain direction.
 
-The effective support tangent is
+### 5.3. Foot contact path
+
+Define the foot contact path by
 
 $$
-t_{\mathrm{sup}}
+\chi_A(\sigma)
 =
-\frac{f\,(w_i t_i + w_{i+1} t_{i+1})}{\|w_i t_i + w_{i+1} t_{i+1}\|}.
+\left\{
+\begin{array}{ll}
+\gamma_A^{-}(-\sigma) & \text{if } \sigma \in [-L_{\mathrm{heel}}, 0], \\
+\gamma_A^{+}(\sigma) & \text{if } \sigma \in [0, L_{\mathrm{toe}}].
+\end{array}
+\right.
+$$
+
+Thus
+
+$$
+\chi_A(0) = A.
+$$
+
+This path is continuous and piecewise affine. It is the primary geometric object for support progression.
+
+## 6. Visible foot direction on one or two segments
+
+### 6.1. Effective toe and heel points on the terrain path
+
+If the foot contact path exists over the full support interval, define the terrain-based effective toe point by
+
+$$
+T_c = \chi_A(L_{\mathrm{toe}}),
+$$
+
+and the terrain-based effective heel point by
+
+$$
+H_c = \chi_A(-L_{\mathrm{heel}}).
+$$
+
+### 6.2. Visible foot direction from the path endpoints
+
+The visible direction of the foot is then defined by the mini-segment joining the effective heel and toe points:
+
+$$
+f_{\mathrm{foot}} = \frac{T_c - H_c}{\|T_c - H_c\|}.
+$$
+
+If the heel length is very small, this remains visually close to the ankle-to-toe direction while still respecting the two-sided support interval.
+
+### 6.3. One-segment and two-segment interpretation
+
+If the full active foot interval lies on one terrain segment, then the previous definition reduces to the terrain-aligned foot direction.
+
+If the foot spans two admissible consecutive segments, then the same formula yields the normalized direction of the actual terrain-following chord between the effective heel and toe points.
+
+This is preferable to averaging segment angles directly because it is built from actual world points and remains geometrically meaningful.
+
+## 7. Admissibility of a foot support path
+
+A full foot support path is admissible only if all the following hold.
+
+1. The path exists on the full interval
+
+$$
+[-L_{\mathrm{heel}}, L_{\mathrm{toe}}].
+$$
+
+2. The active foot interval spans at most two admissible consecutive terrain segments.
+
+3. If two segments are spanned, the corresponding terrain angle jump is bounded:
+
+$$
+|\alpha_{i+1} - \alpha_i| \le \alpha_{\mathrm{foot}}^{\max}.
+$$
+
+4. The visible chord between effective heel and toe does not create a forbidden terrain crossing away from the intended contact path.
+
+5. The resulting visible foot direction remains facing-compatible.
+
+If any of these conditions fails, the corresponding stance or touchdown geometry is not admissible.
+
+## 8. Effective support point and effective support tangent
+
+### 8.1. Primary support coordinate
+
+The support state of one foot is not defined by world-space averaging.
+
+It is defined by a support coordinate
+
+$$
+\sigma \in [-L_{\mathrm{heel}}, L_{\mathrm{toe}}].
+$$
+
+The effective support point is then
+
+$$
+Q = \chi_A(\sigma).
+$$
+
+Thus the support coordinate is primary and the support point is derived from it.
+
+### 8.2. Effective support tangent
+
+Whenever the path tangent exists at the active support coordinate, define
+
+$$
+t_{\mathrm{sup}} = \frac{\partial_{\sigma} \chi_A(\sigma)}{\|\partial_{\sigma} \chi_A(\sigma)\|}.
 $$
 
 Its normal is
@@ -361,31 +364,19 @@ $$
 n_{\mathrm{sup}} = (-t_{{\mathrm{sup}},y}, t_{{\mathrm{sup}},x}).
 $$
 
-### 7.5. Effective support point on two segments
+On one terrain segment, this reduces to the terrain tangent of that segment in the active support direction.
 
-Let $V_\star$ be the unique vertex crossed by the forward terrain path under the foot.
+On a two-segment foot support, the support tangent may change when $\sigma$ crosses the vertex location along the support path.
 
-Define the support midpoint on the first terrain portion by
+### 8.3. Why this replaces weighted support averaging
 
-$$
-Q_i = A + \frac{\lambda_i}{2} f\, t_i.
-$$
+The previous weighted-average construction of a two-segment support point is no longer canonical.
 
-Define the support midpoint on the second terrain portion by
+The correct support-centered geometry is obtained from the support path itself.
 
-$$
-Q_{i+1} = V_\star + \frac{\lambda_{i+1}}{2} f\, t_{i+1}.
-$$
+This is what allows support progression to remain meaningful in standing, walking, load acceptance, and later running.
 
-Then a first effective support point is
-
-$$
-Q = w_i Q_i + w_{i+1} Q_{i+1}.
-$$
-
-This gives a simple and geometrically meaningful interpolation of support over two consecutive segments.
-
-## 8. Local support coordinates of the CM
+## 9. Local support coordinates of the CM
 
 Once $Q$ and $t_{\mathrm{sup}}$ are defined, the CM can be decomposed in the effective support frame:
 
@@ -407,7 +398,39 @@ The quantity $s_Q$ is the tangential progress of the CM relative to the support.
 
 The quantity $z_Q$ is the support-normal height of the CM.
 
-## 9. Exact IK feasibility of one rigid leg
+Relative to the ankle,
+
+$$
+C = A + s_A t_{\mathrm{sup}} + z_A n_{\mathrm{sup}}.
+$$
+
+Thus
+
+$$
+s_A = (C-A) \cdot t_{\mathrm{sup}},
+$$
+
+$$
+z_A = (C-A) \cdot n_{\mathrm{sup}}.
+$$
+
+Since
+
+$$
+Q = \chi_A(\sigma),
+$$
+
+there is no longer a globally valid linear identity of the form
+
+$$
+Q = A + \sigma t_{\mathrm{sup}}
+$$
+
+on arbitrary two-segment contact geometry.
+
+The ankle-local and support-local coordinates must therefore be kept distinct, with the relation mediated by the contact path itself.
+
+## 10. Exact IK feasibility of one rigid leg
 
 Given an ankle point $A$, a pelvis point $P$, and two rigid segments of length $L$, we ask when there exists a knee point $K$ such that
 
@@ -421,7 +444,7 @@ $$
 \|K-P\| = L.
 $$
 
-### 9.1. Necessary and sufficient condition for existence
+### 10.1. Necessary and sufficient condition for existence
 
 Define
 
@@ -437,7 +460,7 @@ $$
 
 This is the exact rigid two-link IK condition.
 
-### 9.2. Midpoint construction of the knee
+### 10.2. Midpoint construction of the knee
 
 Assume
 
@@ -475,7 +498,7 @@ $$
 h = \sqrt{L^2 - \left(\frac{d}{2}\right)^2 }.
 $$
 
-### 9.3. Fully extended case
+### 10.3. Fully extended case
 
 If
 
@@ -495,7 +518,7 @@ $$
 K = M.
 $$
 
-### 9.4. Degenerate folded case
+### 10.4. Degenerate folded case
 
 If
 
@@ -507,34 +530,34 @@ then the ankle and pelvis coincide and the knee may lie anywhere on the circle o
 
 This case is mathematically possible but physically irrelevant for normal locomotion.
 
-## 10. Exact knee flexion angle
+## 11. Exact knee flexion angle
 
-Let $\beta$ be the internal knee angle.
+Let $\beta_{\mathrm{knee}}$ be the internal knee angle.
 
 By the law of cosines,
 
 $$
-d^2 = L^2 + L^2 - 2L^2 \cos \beta.
+d^2 = L^2 + L^2 - 2L^2 \cos \beta_{\mathrm{knee}}.
 $$
 
 Therefore
 
 $$
-\cos \beta = \frac{2L^2 - d^2}{2L^2}.
+\cos \beta_{\mathrm{knee}} = \frac{2L^2 - d^2}{2L^2}.
 $$
 
 Hence
 
 $$
-\beta = \arccos\left(\frac{2L^2 - d^2}{2L^2}\right).
+\beta_{\mathrm{knee}} = \arccos\left(\frac{2L^2 - d^2}{2L^2}\right).
 $$
 
 In particular:
 
-- if $d = 2L$, then $\beta = \pi$ and the leg is fully extended,
-- if $d < 2L$, then $\beta < \pi$ and the leg is flexed.
+- if $d = 2L$, then $\beta_{\mathrm{knee}} = \pi$ and the leg is fully extended,
+- if $d < 2L$, then $\beta_{\mathrm{knee}} < \pi$ and the leg is flexed.
 
-## 11. Exact IK-feasible region of the CM for one stance ankle
+## 12. Exact IK-feasible region of the CM for one stance ankle
 
 If the torso angle is $\theta$, then
 
@@ -558,7 +581,7 @@ $$
 
 This set is a geometric feasibility set. It is not a proof that the CM should be artificially trapped near the center of that set at all times.
 
-## 12. Two-leg simultaneous IK feasibility
+## 13. Two-leg simultaneous IK feasibility
 
 If both feet are in contact, with ankles $A_L$ and $A_R$, then simultaneous rigid-leg feasibility requires
 
@@ -592,13 +615,13 @@ $$
 
 Again, this is a geometric fact, not a proof that the CM should always stay near the midpoint between both feet.
 
-## 13. Main conclusions of this document
+## 14. Main conclusions of this document
 
 1. The terrain must be treated as a segmented polyline.
-2. The ankle is the reference point of the foot, but it is not the whole support.
-3. The mini-segment from ankle to toe gives the correct cheap visual interpolation of foot slope over two segments.
-4. A two-segment foot must satisfy explicit admissibility conditions.
-5. The effective support point $Q$ and tangent $t_{\mathrm{sup}}$ must be defined separately from the visible foot direction.
+2. The ankle is the reference point of the foot, but the support interval is two-sided with a small positive heel length.
+3. The visible foot direction should be derived from effective heel and toe points on the terrain-following contact path.
+4. A foot support geometry must satisfy explicit admissibility conditions on the terrain path.
+5. The effective support point $Q$ and tangent $t_{\mathrm{sup}}$ must be defined from the support path and the support coordinate, not by old weighted averaging rules.
 6. The exact rigid two-link IK condition is simply $\|P-A\| \le 2L$.
 7. The knee reconstruction formula is exact and closed-form.
 8. The IK-feasible region is a geometric set, not a dynamic prison for the CM.
