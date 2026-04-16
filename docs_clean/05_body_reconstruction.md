@@ -49,13 +49,13 @@ At a generic time, the reconstruction module receives at least:
 - the current swing ankle if one foot is in swing,
 - the relevant foot directions.
 
-The key point is that body reconstruction is **mode-aware**, not “walking-only”.
+The key point is that body reconstruction is mode-aware, not walking-only.
 
 ## 3. Reconstruction forward axis
 
 ### 3.1. Why a reconstruction axis is needed
 
-Several parts of the reconstruction require a coherent notion of "forward":
+Several parts of the reconstruction require a coherent notion of forward:
 
 - torso lean,
 - knee-branch choice,
@@ -92,7 +92,7 @@ $$
 n_{\mathrm{rec}} = (-t_{{\mathrm{rec}},y}, t_{{\mathrm{rec}},x}).
 $$
 
-This definition closes an important architectural gap: body reconstruction must remain well defined even when the support frame is temporarily absent.
+This closes an important architectural gap: body reconstruction must remain well defined even when the support frame is temporarily absent.
 
 ## 4. Torso direction vector
 
@@ -142,15 +142,7 @@ $$
 A first stance-based torso target law is
 
 $$
-\theta^{\star}
-=
-k_v \tanh\left(\frac{v_f}{v_{\mathrm{ref}}}\right)
-+
-k_{\alpha}\alpha_{\mathrm{sup}}
-+
-k_z \frac{z_Q - z_{\mathrm{ref}}}{L}
-+
-k_{\rho}\rho.
+\theta^{\star} = k_v \tanh\left(\frac{v_f}{v_{\mathrm{ref}}}\right) + k_{\alpha}\alpha_{\mathrm{sup}} + k_z \frac{z_Q - z_{\mathrm{ref}}}{L} + k_{\rho}\rho.
 $$
 
 ### 5.2. Flight-based target law
@@ -160,11 +152,7 @@ When no support frame exists, the stance-based variables are unavailable.
 In that case define a flight target law using the reconstruction frame:
 
 $$
-\theta_{\mathrm{flight}}^{\star}
-=
-k_v^{\mathrm{fl}} \tanh\left(\frac{v_f}{v_{\mathrm{ref}}^{\mathrm{fl}}}\right)
-+
-k_{\rho}^{\mathrm{fl}}\rho.
+\theta_{\mathrm{flight}}^{\star} = k_v^{\mathrm{fl}} \tanh\left(\frac{v_f}{v_{\mathrm{ref}}^{\mathrm{fl}}}\right) + k_{\rho}^{\mathrm{fl}}\rho.
 $$
 
 So the torso target remains well defined even in flight.
@@ -174,9 +162,7 @@ So the torso target remains well defined even in flight.
 The target torso angle must remain bounded:
 
 $$
-\theta_{\mathrm{cmd}}^{\star}
-=
-\mathrm{clamp}(\theta^{\star}, \theta_{\min}, \theta_{\max}).
+\theta_{\mathrm{cmd}}^{\star} = \mathrm{clamp}(\theta^{\star}, \theta_{\min}, \theta_{\max}).
 $$
 
 The actual torso angle may then be filtered by
@@ -309,8 +295,6 @@ $$
 K_{\mathrm{sw}}^{\pm} = M_{\mathrm{sw}} \pm h_{\mathrm{sw}} \nu_{\mathrm{sw}}^{\perp}.
 $$
 
-This fixes the earlier notation bug where a vector $u$ appeared without being defined. The correct perpendicular formulas are written here directly in terms of $\nu_{\mathrm{st}}$ and $\nu_{\mathrm{sw}}$.
-
 ## 9. Knee-branch selection
 
 ### 9.1. Need for a deterministic branch rule
@@ -342,8 +326,6 @@ $$
 $$
 
 The chosen branch is the one whose sign matches the global visual convention of the project.
-
-This makes the branch rule explicit and closes the earlier gap where the normal used in branch selection was not defined precisely enough.
 
 ### 9.3. Temporal continuity
 
@@ -383,21 +365,13 @@ If a nominal walking frame systematically produces a stance knee angle far below
 
 ## 11. Visible stance-foot orientation
 
-If the stance foot lies on one segment, define
+The visible stance-foot direction must be determined from terrain-supported foot geometry.
 
-$$
-f_{\mathrm{foot,st}} = f\, t_i.
-$$
+If the stance foot lies on one segment, the visible foot direction follows the admissible terrain-supported stance orientation.
 
-If the stance foot spans two admissible segments, define
+If the stance foot spans two admissible segments, the visible stance-foot direction must be derived from the effective heel and toe points of the support path.
 
-$$
-f_{\mathrm{foot,st}} = \frac{T_{c,\mathrm{st}} - A_{\mathrm{st}}}{\|T_{c,\mathrm{st}} - A_{\mathrm{st}}\|}.
-$$
-
-The visible stance-foot direction is therefore always determined by terrain support geometry.
-
-It need not coincide exactly with $t_{\mathrm{sup}}$.
+Thus the visible stance-foot direction need not coincide exactly with $t_{\mathrm{sup}}$.
 
 ## 12. Visible swing-foot orientation
 
@@ -416,44 +390,48 @@ $$
 Using the same quintic blend $h(\tau)$ as in the swing generator, define
 
 $$
-\widetilde f_{\mathrm{foot}}(\tau)
-=
-(1-h(\tau))f_{\mathrm{foot},0} + h(\tau)f_{\mathrm{foot},1}.
+\widetilde f_{\mathrm{foot}}(\tau) = (1-h(\tau))f_{\mathrm{foot},0} + h(\tau)f_{\mathrm{foot},1}.
 $$
 
 Then define the normalized swing-foot direction
 
 $$
-f_{\mathrm{foot,sw}}(\tau)
-=
-\frac{\widetilde f_{\mathrm{foot}}(\tau)}{\|\widetilde f_{\mathrm{foot}}(\tau)\|}.
+f_{\mathrm{foot,sw}}(\tau) = \frac{\widetilde f_{\mathrm{foot}}(\tau)}{\|\widetilde f_{\mathrm{foot}}(\tau)\|}.
 $$
 
 This gives a continuous visible swing-foot orientation.
 
-## 13. Visible toe points
+## 13. Visible heel and toe points
 
-Once the foot directions are known, the visible toe points are
-
-$$
-T_{\mathrm{st}} = A_{\mathrm{st}} + L_{\mathrm{toe}} f_{\mathrm{foot,st}},
-$$
+The canonical visible foot interval is
 
 $$
-T_{\mathrm{sw}} = A_{\mathrm{sw}} + L_{\mathrm{toe}} f_{\mathrm{foot,sw}}.
+[-L_{\mathrm{heel}}, L_{\mathrm{toe}}],
 $$
 
-If later a heel segment is introduced, the visible heel points are
+with small positive heel length.
+
+Once the foot directions are known, the visible stance-foot endpoints are
 
 $$
 H_{\mathrm{st}} = A_{\mathrm{st}} - L_{\mathrm{heel}} f_{\mathrm{foot,st}},
 $$
 
 $$
-H_{\mathrm{sw}} = A_{\mathrm{sw}} - L_{\mathrm{heel}} f_{\mathrm{foot,sw}}.
+T_{\mathrm{st}} = A_{\mathrm{st}} + L_{\mathrm{toe}} f_{\mathrm{foot,st}}.
 $$
 
-At the current stage $L_{\mathrm{heel}}=0$, so the ankle is also the heel endpoint.
+Likewise the visible swing-foot endpoints are
+
+$$
+H_{\mathrm{sw}} = A_{\mathrm{sw}} - L_{\mathrm{heel}} f_{\mathrm{foot,sw}},
+$$
+
+$$
+T_{\mathrm{sw}} = A_{\mathrm{sw}} + L_{\mathrm{toe}} f_{\mathrm{foot,sw}}.
+$$
+
+Thus visible foot geometry is consistent with the canonical small-positive-heel model already adopted by the clean support geometry.
 
 ## 14. Full visible frame
 
@@ -534,11 +512,21 @@ The renderer must never repair an impossible locomotion state by cheating on len
 ## 17. Main conclusions of this document
 
 1. Body reconstruction must be a deterministic consequence of the authoritative locomotion state.
+
 2. The torso angle is a structural variable, not a cosmetic variable.
+
 3. A reconstruction-forward tangent $t_{\mathrm{rec}}$ must exist even when the support frame is inactive.
+
 4. The pelvis and torso nodes are reconstructed exactly from $C$ and $\theta$.
+
 5. Both knees are reconstructed by exact closed-form two-link IK.
+
 6. Knee-branch selection must satisfy both a global convention and temporal continuity.
+
 7. Visible foot directions must remain distinct from effective support tangents.
-8. No rendered frame may violate any rigid segment length.
-9. If exact reconstruction fails, the locomotion state must be corrected upstream rather than repaired in rendering.
+
+8. Visible foot geometry must be consistent with the canonical small-positive-heel model.
+
+9. No rendered frame may violate any rigid segment length.
+
+10. If exact reconstruction fails, the locomotion state must be corrected upstream rather than repaired in rendering.
