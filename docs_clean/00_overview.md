@@ -10,22 +10,50 @@ It does **not** redevelop all derivations in detail. It only fixes:
 
 - the global principles,
 - the common notation,
-- the list of active documents,
-- the architectural commitments that all later files must respect.
+- the current documentary map,
+- the architectural commitments that all later files must respect,
+- the relation between the stable clean line and the newer support-centered working line.
 
 All detailed derivations belong to the specialized documents.
 
-## 1. Active documentation map
+## 1. Current documentary state
 
-The active clean documentation set is the following.
+The repository is intentionally split into three documentary zones.
+
+### 1.1. `docs_clean/`
+
+This folder is the canonical line intended for long-term consolidation.
+
+At the present stage, it already contains the main mathematical backbone:
 
 - `docs_clean/00_overview.md`
 - `docs_clean/01_geometry.md`
 - `docs_clean/02_walk_protocol.md`
+- `docs_clean/03_foothold_planner.md`
 - `docs_clean/04_swing_generator.md`
 - `docs_clean/05_body_reconstruction.md`
+- `docs_clean/06_run_protocol.md`
+- `docs_clean/07_prediction_layer.md`
+- `docs_clean/08_auxiliary_variables.md`
 
-The intended reading order is exactly the numbering order.
+However, not all of these files are equally up to date relative to the newest support-centered decisions.
+
+### 1.2. `docs/`
+
+This folder is the active working area for the current redesign.
+
+The working documents currently carrying the strongest architectural direction are:
+
+- `docs/09_standing_support_load_acceptance.md`
+- `docs/10_support_progression_sigma.md`
+- `docs/11_stand_walk_transition_and_step_trigger.md`
+- `docs/12_foothold_planner_under_support_framework.md`
+
+These files are not yet the final clean line, but they express the most recent project-level commitments on support, standing, gait initiation, and support acquisition.
+
+### 1.3. `docs/trash/`
+
+This folder stores displaced documents that were moved out of the active line for clarity, while preserving content and traceability.
 
 ## 2. Global principles
 
@@ -43,9 +71,13 @@ The whole project is organized around the following principles.
 
 6. The body morphology is rigid: no rendered frame may violate segment lengths.
 
-7. Walking and running are two distinct hybrid protocols built on the same geometric and state architecture.
+7. Walking, standing, and running are distinct hybrid protocols built on the same geometric and state architecture.
 
 8. Recovery must emerge from the same formalism through continuous deformation of admissible sets, target lengths, timing, and costs.
+
+9. A valid contact is not yet a dominant support. Contact acquisition, load acceptance, and support dominance are distinct notions.
+
+10. The support state is primary. Rendering must follow support-aware locomotion state, not compensate for an incoherent support model.
 
 ## 3. Global frame and gravity
 
@@ -128,32 +160,7 @@ $$
 
 So rigid two-link leg IK is possible if and only if the pelvis-to-ankle distance stays below or at $2L$.
 
-## 5. Facing sign and local support geometry
-
-The character facing direction is encoded by a sign
-
-$$
-f \in \{-1,+1\}.
-$$
-
-The value $f=+1$ means facing right, and $f=-1$ means facing left.
-
-A stance or landing support defines:
-
-- an ankle $A$,
-- an effective support point $Q$,
-- an effective support tangent $t_{\mathrm{sup}}$,
-- an effective support normal $n_{\mathrm{sup}}$.
-
-The CM may then be decomposed as
-
-$$
-C = Q + s_Q t_{\mathrm{sup}} + z_Q n_{\mathrm{sup}}.
-$$
-
-These local support coordinates are the natural coordinates for support logic, capture, and gait-phase reasoning.
-
-## 6. Terrain model
+## 5. Terrain model
 
 The terrain is a finite ordered polyline
 
@@ -167,11 +174,7 @@ $$
 S_j = [V_j, V_{j+1}].
 $$
 
-Each segment has a constant tangent $t_j$, a constant normal $n_j$, and a slope angle
-
-$$
-\alpha_j = \mathrm{atan2}(t_{j,y}, t_{j,x}).
-$$
+Each segment has a constant tangent $t_j$, a constant normal $n_j$, and a slope angle determined by that tangent.
 
 Vertices are genuine geometric events.
 
@@ -181,73 +184,197 @@ The model must explicitly handle:
 - two-segment support,
 - short support segments,
 - slope discontinuities,
-- step-like transitions.
+- steep but still admissible hills.
 
-## 7. Foot model
+At the current project stage, the main terrain target is uneven piecewise-linear hills with segment angles below ninety degrees. Stairs are not yet a defining design constraint.
+
+## 6. Foot and support model
 
 The ankle is the reference point of the foot.
 
 A visible foot direction is denoted by $f_{\mathrm{foot}}$.
 
-The current foot interval is
+The current project-level direction is to use a **small but positive heel length**, not a strictly zero heel length. Therefore the intended active foot interval is
 
 $$
-\mathcal{F}(A, f_{\mathrm{foot}})
-=
-\{A + \sigma f_{\mathrm{foot}} : \sigma \in [0, L_{\mathrm{toe}}]\},
+[-L_{\mathrm{heel}}, L_{\mathrm{toe}}],
 $$
 
-because at the current stage
+with
 
 $$
-L_{\mathrm{heel}} = 0.
+0 < L_{\mathrm{heel}} \ll L.
 $$
 
-The visible foot direction and the effective support tangent are related but not identical objects.
+This is a project-level commitment already adopted in the active working line, even though some older clean files still need to be updated to reflect it.
 
-- $f_{\mathrm{foot}}$ is used for visible reconstruction.
-- $t_{\mathrm{sup}}$ is used for support dynamics and CM decomposition.
+The key support-centered decision is the following.
 
-This distinction is structurally important.
+The effective support point must not be defined by a purely world-space average. Instead, each active foot induces a contact path
 
-## 8. Canonical document responsibilities
+$$
+\chi(\sigma), \qquad \sigma \in [-L_{\mathrm{heel}}, L_{\mathrm{toe}}],
+$$
+
+and the effective support point is defined from the support coordinate itself:
+
+$$
+Q = \chi(\sigma).
+$$
+
+Thus the support coordinate $\sigma$ is primary, and $Q$ is derived from it.
+
+This is the correct architectural interpretation of support progression in the current model.
+
+## 7. Facing sign and local support geometry
+
+The character facing direction is encoded by a sign
+
+$$
+f \in \{-1,+1\}.
+$$
+
+The value $f=+1$ means facing right, and $f=-1$ means facing left.
+
+A support state defines:
+
+- one or two active ankles,
+- one or two foot-specific support points,
+- an effective support point $Q$,
+- an effective support tangent $t_{\mathrm{sup}}$,
+- an effective support normal $n_{\mathrm{sup}}$.
+
+The CM may then be decomposed as
+
+$$
+C = Q + s_Q t_{\mathrm{sup}} + z_Q n_{\mathrm{sup}}.
+$$
+
+These local support coordinates are the natural coordinates for support logic, capture, and gait-phase reasoning.
+
+## 8. Standing, walking, and running
+
+The architecture must now be read in three layers.
+
+### 8.1. Standing
+
+Standing is **not** walking with zero speed.
+
+Standing is an explicit bilateral-support regime in which both feet remain in ground contact and support allocation remains internal to a bilateral support state.
+
+The current working line models this through:
+
+- explicit bilateral support,
+- foot-specific support coordinates,
+- a support-allocation scalar $\beta$,
+- viability-based step triggering.
+
+### 8.2. Walking
+
+Walking remains a hybrid gait with alternating support phases, but it must now be interpreted through the support-centered framework.
+
+This means that walking is no longer just:
+
+- single support,
+- simple double support,
+- step switch.
+
+It must instead be understood together with:
+
+- explicit support progression through $\sigma$,
+- finite support transfer through $\beta$,
+- standing-to-walking gait initiation,
+- load acceptance after touchdown,
+- planner outputs interpreted as support acquisition rather than only ankle placement.
+
+### 8.3. Running
+
+Running remains a distinct hybrid protocol from walking.
+
+The same authoritative state architecture is preserved, but the contact protocol changes:
+
+- spring-like stance,
+- explicit takeoff,
+- explicit flight,
+- touchdown into a new stance regime.
+
+## 9. Prediction and auxiliary variables
+
+The clean line now already contains a prediction layer and an auxiliary-variable layer.
+
+### Prediction
+
+`docs_clean/07_prediction_layer.md` defines the prediction operator as a hybrid, event-aware, candidate-conditioned map used by planning and touchdown reasoning.
+
+### Auxiliary variables
+
+`docs_clean/08_auxiliary_variables.md` defines:
+
+- the support progression variable $\sigma$,
+- the transfer variable $\beta$,
+- the reactive intensity $\rho$.
+
+However, the newer working documents in `docs/09`–`12` refine the interpretation of these variables further, especially for:
+
+- small positive heel length,
+- support-path-based definition of $Q$,
+- bilateral standing,
+- gait initiation,
+- finite load acceptance,
+- support acquisition planning.
+
+Those refinements must later be consolidated back into the clean line.
+
+## 10. Canonical document responsibilities
 
 The specialized documents are responsible for the following.
 
 ### Geometry
 
-`01_geometry.md` defines:
+`01_geometry.md` should define:
 
 - the terrain polyline rigorously,
-- one-segment and two-segment foot geometry,
-- admissibility of a visible foot spanning two segments,
+- foot geometry with the current heel-to-toe interval,
+- support-path construction,
 - effective support point and tangent,
 - exact two-link leg IK,
 - exact IK-feasible regions.
 
 ### Walk
 
-`02_walk_protocol.md` defines:
+`02_walk_protocol.md` should define:
 
 - the hybrid walk modes,
 - the nominal walking stance manifold,
-- the local pendular geometry,
-- the walking support transfer,
+- the walking support law,
+- support transfer,
+- gait initiation and return to standing,
 - the reactive walking deformation through $\rho$.
+
+### Foothold planning
+
+`03_foothold_planner.md` should define:
+
+- the support-acquisition planner,
+- admissible future contact paths,
+- candidate-conditioned prediction at touchdown,
+- load-acceptance viability,
+- support-centered scoring.
 
 ### Swing
 
-`04_swing_generator.md` defines:
+`04_swing_generator.md` should define:
 
 - the swing ankle path,
 - clearance,
 - collision avoidance,
-- touchdown, early landing, delayed landing,
-- consistency with the future support frame.
+- touchdown,
+- early landing and delayed landing,
+- consistency with support acquisition and load acceptance.
 
 ### Reconstruction
 
-`05_body_reconstruction.md` defines:
+`05_body_reconstruction.md` should define:
 
 - the torso-angle law,
 - exact pelvis and torso reconstruction,
@@ -255,17 +382,45 @@ The specialized documents are responsible for the following.
 - visible foot orientation,
 - frame validity conditions.
 
-## 9. Main architectural commitments
+### Run
+
+`06_run_protocol.md` should define:
+
+- the running stance law,
+- takeoff,
+- flight,
+- touchdown into stance,
+- continuity with the shared `CM-first` support architecture.
+
+### Prediction
+
+`07_prediction_layer.md` should define:
+
+- hybrid event-aware prediction,
+- candidate-conditioned prediction,
+- prediction consistency with support and swing,
+- viability failure as a first-class prediction output.
+
+### Auxiliary variables
+
+`08_auxiliary_variables.md` should define:
+
+- the canonical meaning of $\sigma$,
+- the canonical meaning of $\beta$,
+- the canonical meaning of $\rho$,
+- their continuity, resets, and admissibility conditions.
+
+## 11. Main architectural commitments
 
 The following commitments are binding for the whole documentation.
 
-### 9.1. No fake geometry in rendering
+### 11.1. No fake geometry in rendering
 
 If a locomotion state cannot be reconstructed with exact rigid segment lengths, the renderer must not cheat.
 
 The correct response is to modify the locomotion state upstream.
 
-### 9.2. Feasibility sets are geometric, not prisons
+### 11.2. Feasibility sets are geometric, not prisons
 
 IK-feasible sets such as
 
@@ -279,7 +434,17 @@ They must not be confused with tiny nominal boxes in which the CM should remain 
 
 Large perturbations must be able to drive the system away from nominal gait and trigger recovery.
 
-### 9.3. Walk and run share architecture, not stance law
+### 11.3. Contact, support, and dominance are distinct notions
+
+A valid contact event does not automatically imply dominant support.
+
+The architecture must distinguish at least:
+
+- contact acquisition,
+- load acceptance,
+- support dominance.
+
+### 11.4. Walk and run share architecture, not stance law
 
 The following are shared across gait regimes:
 
@@ -291,6 +456,7 @@ The following are shared across gait regimes:
 - foothold planning architecture,
 - swing-generation architecture,
 - body reconstruction architecture,
+- prediction architecture,
 - reactive intensity $\rho$.
 
 The following change with gait:
@@ -300,22 +466,19 @@ The following change with gait:
 - the support-transfer law,
 - the presence or absence of flight.
 
-## 10. What is intentionally deferred
+## 12. Present consolidation status
 
-This overview does not fix the full mathematical treatment of:
+The current situation is therefore the following.
 
-- the exact evolution law of the foot-rocker scalar $\sigma$,
-- the exact evolution law of the double-support transfer scalar $\beta$,
-- the detailed prediction operator used by foothold planning,
-- gait transitions,
-- jump,
-- landing.
+- The clean line already contains the whole intended document skeleton.
+- The active working line in `docs/09`–`12` contains newer support-centered decisions that still need to be merged back into the clean line.
+- The next major clean consolidations should focus on geometry, walking, foothold planning, swing, and the interaction between prediction and support variables.
 
-Those points either already belong to specialized documents or should become dedicated documents in the next consolidation stage.
+This overview intentionally records that status rather than pretending that all specialized clean files are already fully synchronized.
 
-## 11. Main conclusion
+## 13. Main conclusion
 
-This documentation is now organized around one stable backbone:
+The documentation is now organized around one stable backbone:
 
 $$
 \text{Terrain}
@@ -324,9 +487,13 @@ $$
 \longrightarrow
 \text{CM dynamics}
 \longrightarrow
+\text{Prediction and support viability}
+\longrightarrow
 \text{Foothold planning}
 \longrightarrow
-\text{Swing}
+\text{Swing and contact acquisition}
+\longrightarrow
+\text{Load acceptance and support transfer}
 \longrightarrow
 \text{Exact body reconstruction}.
 $$
