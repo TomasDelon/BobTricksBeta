@@ -2,27 +2,29 @@
 
 ## 0. Goal of this document
 
-The goal of this document is to define the mathematical protocol of running in a form compatible with the same `CM-first` architecture used for walking.
+The goal of this document is to define the mathematical protocol of running in a form compatible with the same support-centered `CM-first` architecture used by the current clean line.
 
 This document fixes:
 
 - the hybrid mode set of running,
 - the authoritative running state,
-- the effective running stance geometry,
+- the local support geometry used during running stance,
 - the spring-like stance law,
-- the flight phase,
+- the role of the support coordinate $\sigma$ during running stance,
 - takeoff,
+- flight,
 - touchdown after flight,
 - the role of reactivity in running,
-- the precise sense in which run reuses the same global architecture as walk.
+- the precise sense in which run reuses the same architectural backbone as standing and walking.
 
 This document does **not** yet formalize:
 
 - walk-to-run or run-to-walk transitions,
 - jump as an intentional transition into flight,
-- landing as a high-energy capture protocol.
+- landing as a high-energy capture protocol,
+- multi-contact running variants.
 
-Those belong to a later document.
+Those belong to later documents.
 
 ## 1. Why running is not accelerated walking
 
@@ -32,7 +34,7 @@ In nominal walking:
 
 - the stance leg behaves approximately like an inverted pendulum,
 - the center of mass reaches a local height maximum around mid-stance,
-- the support transition is organized around a finite transfer phase.
+- support transition is organized around explicit bilateral transfer.
 
 In nominal running:
 
@@ -44,9 +46,14 @@ Therefore the running protocol must differ from the walking protocol in at least
 
 1. The stance law cannot be the same.
 2. Flight must exist explicitly.
-3. The stance transition is no longer a standard walking double-support transfer.
+3. Running stance ends in takeoff rather than in the standard walking load-acceptance sequence.
 
-The same authoritative CM $C$ remains the primary dynamic object, but the contact protocol changes.
+What remains unchanged is the global architecture:
+
+- one authoritative virtual center of mass,
+- the same rigid morphology,
+- the same support-centered foot geometry,
+- the same prediction, planning, swing, and reconstruction backbone.
 
 ## 2. Running mode set
 
@@ -64,7 +71,7 @@ The meanings are:
 
 This is the minimal alternating running automaton.
 
-More refined variants may later split stance into subphases, but this is the correct first clean hybrid model.
+More refined later variants may split running stance into subphases, but the present file uses the minimal clean mode set.
 
 ## 3. Running state
 
@@ -85,11 +92,11 @@ The running state must also contain:
 - the torso angle $\theta$,
 - the current stance ankle $A_{\mathrm{st}}$ when stance exists,
 - the current swing ankle $A_{\mathrm{sw}}$,
-- the next ankle target $A_{\mathrm{next}}$,
-- the effective support point $Q$ when stance exists,
-- the effective support tangent $t_{\mathrm{sup}}$ when stance exists,
-- the effective support normal $n_{\mathrm{sup}}$ when stance exists,
-- the rocker scalar $\sigma$ when stance exists,
+- the next planned ankle target $A_{\mathrm{next}}$,
+- the current stance support coordinate $\sigma$ when stance exists,
+- the current stance support point $Q$ when stance exists,
+- the current stance support tangent $t_{\mathrm{sup}}$ when stance exists,
+- the current stance support normal $n_{\mathrm{sup}}$ when stance exists,
 - the local time in the current mode $\tau_{\mathrm{mode}}$,
 - the reactive intensity $\rho$,
 - the current mode $\mathcal{M}$.
@@ -97,16 +104,14 @@ The running state must also contain:
 A minimal abstract running state is therefore
 
 $$
-X_{\mathrm{run}}
-=
-(C, V, \theta, A_{\mathrm{st}}, A_{\mathrm{sw}}, A_{\mathrm{next}}, Q, t_{\mathrm{sup}}, n_{\mathrm{sup}}, \sigma, \tau_{\mathrm{mode}}, \rho, \mathcal{M}).
+X_{\mathrm{run}} = (C, V, \theta, A_{\mathrm{st}}, A_{\mathrm{sw}}, A_{\mathrm{next}}, \sigma, Q, t_{\mathrm{sup}}, n_{\mathrm{sup}}, \tau_{\mathrm{mode}}, \rho, \mathcal{M}).
 $$
 
-In flight, the support variables are inactive or only predicted. In stance, they are fully defined.
+In flight, support variables are inactive or only predicted. In stance, they are fully defined.
 
 ## 4. Exact rigid geometry remains unchanged
 
-The body morphology remains exactly the same as in walking.
+The body morphology remains exactly the same as in standing and walking.
 
 The leg segments are rigid:
 
@@ -126,9 +131,7 @@ $$
 
 No bone stretching is allowed.
 
-The difference between walking and running is therefore **not** morphological.
-
-It is dynamical and hybrid.
+The difference between walking and running is therefore not morphological. It is dynamical and hybrid.
 
 ## 5. Effective running stance length
 
@@ -138,9 +141,9 @@ $$
 \ell = \|P-A_{\mathrm{st}}\|.
 $$
 
-Unlike nominal walking, where the stance leg should remain close to a nearly extended value, nominal running allows $\ell$ to vary substantially during the stance phase.
+Unlike nominal walking, where the stance leg should remain close to a nearly extended value, nominal running allows $\ell$ to vary substantially during stance.
 
-Define a running reference stance length
+Define a running reference stance length by
 
 $$
 \ell_r^{\star} < 2L.
@@ -152,41 +155,89 @@ It expresses the fact that nominal running stance is more compressed than nomina
 
 ## 6. Local support frame in running stance
 
-When the body is in running stance, define the effective support point and support frame exactly as in walking:
+### 6.1. Support-path-based running stance geometry
+
+Running stance must use the same support-centered geometry as the current clean line.
+
+Let the active running foot induce a contact path
 
 $$
-Q = A_{\mathrm{st}} + \sigma t_{\mathrm{sup}},
+\chi_{\mathrm{st}}(\sigma), \qquad \sigma \in [-L_{\mathrm{heel}}, L_{\mathrm{toe}}],
 $$
 
 with
 
 $$
-\sigma \in [0, L_{\mathrm{toe}}].
+\chi_{\mathrm{st}}(0) = A_{\mathrm{st}}.
 $$
 
-The CM decomposes relative to the support point as
+Then the effective running support point is
+
+$$
+Q = \chi_{\mathrm{st}}(\sigma).
+$$
+
+The stance support tangent is
+
+$$
+t_{\mathrm{sup}} = \frac{\partial_{\sigma} \chi_{\mathrm{st}}(\sigma)}{\|\partial_{\sigma} \chi_{\mathrm{st}}(\sigma)\|},
+$$
+
+and the stance support normal is
+
+$$
+n_{\mathrm{sup}} = (-t_{{\mathrm{sup}},y}, t_{{\mathrm{sup}},x}).
+$$
+
+Thus running does **not** revert to the old global linear rule
+
+$$
+Q = A_{\mathrm{st}} + \sigma t_{\mathrm{sup}}.
+$$
+
+The effective support point remains path-based.
+
+### 6.2. Support-local and ankle-local coordinates
+
+The CM decomposes in the running support frame as
 
 $$
 C = Q + s_Q t_{\mathrm{sup}} + z_Q n_{\mathrm{sup}}.
 $$
 
-Likewise, relative to the stance ankle,
+Relative to the stance ankle,
 
 $$
 C = A_{\mathrm{st}} + s_A t_{\mathrm{sup}} + z_A n_{\mathrm{sup}}.
 $$
 
-Thus
+Likewise the pelvis can be decomposed as
 
 $$
-s_Q = s_A - \sigma,
+P = A_{\mathrm{st}} + p_A t_{\mathrm{sup}} + q_A n_{\mathrm{sup}}.
 $$
 
+The quantity
+
 $$
-z_Q = z_A.
+p_A = (P - A_{\mathrm{st}}) \cdot t_{\mathrm{sup}}
 $$
 
-This is an important architectural continuity point: the same local support geometry is retained across walking and running.
+is the natural stance-progression coordinate for the running support law.
+
+Because the support point is defined by
+
+$$
+Q = \chi_{\mathrm{st}}(\sigma),
+$$
+
+there is no globally valid linear identity of the old form
+
+$$
+s_Q = s_A - \sigma
+$$
+
+on arbitrary support geometry. The ankle-local and support-local coordinates must remain distinct.
 
 ## 7. Running stance dynamics
 
@@ -202,7 +253,7 @@ $$
 u = u_{\mathrm{spring}} + u_{\mathrm{tan}} + u_{\mathrm{aux}}.
 $$
 
-The term $u_{\mathrm{aux}}$ groups supplementary regularization terms that are not part of the core running stance law.
+The term $u_{\mathrm{aux}}$ groups supplementary regularization terms not belonging to the core running stance law.
 
 ### 7.1. Effective spring-like stance term
 
@@ -247,11 +298,11 @@ This means:
 - if the effective leg is compressed below its reference length, the stance generates a restoring push,
 - if the effective leg is lengthening too quickly, the damping term reduces excessive rebound.
 
-This is not a literal physical leg spring. It is a virtual stance law compatible with a rigid two-link leg whose effective length changes through posture and knee flexion.
+This is not a literal leg spring. It is a virtual stance law compatible with rigid morphology.
 
 ### 7.2. Tangential running control
 
-Define the tangential stance velocity
+Define the tangential stance velocity by
 
 $$
 \dot s_A = \dot C \cdot t_{\mathrm{sup}}.
@@ -263,7 +314,7 @@ $$
 u_{\mathrm{tan}} = k_t (v_t^{\star} - \dot s_A)t_{\mathrm{sup}}.
 $$
 
-This regulates running speed along the current support tangent.
+This regulates forward progression along the active support tangent.
 
 ## 8. Mid-stance compression criterion
 
@@ -283,7 +334,7 @@ $$
 
 Thus $\ell$ has a strict local minimum during stance.
 
-Equivalently, when the support frame remains well defined, the support-normal CM height should satisfy
+Equivalently, when the support frame remains well defined, the support-normal CM height may satisfy
 
 $$
 \dot z_Q(t_m) = 0,
@@ -297,39 +348,41 @@ $$
 
 This expresses formally that running has a lowered mid-stance configuration, in contrast with the walking apex.
 
-## 9. Rocker progression in running stance
+## 9. Support progression during running stance
 
-The support-foot rocker scalar $\sigma$ remains meaningful in running stance because forefoot progression still matters for takeoff.
+The support coordinate $\sigma$ remains meaningful in running stance because forefoot progression still matters for takeoff.
 
-A first consistent choice is to reuse the same formal rocker structure as in walking.
+However, running must not simply reuse the old walking linear support rule.
 
-Define a running-stance phase scalar
+The canonical running support law should be state-based.
 
-$$
-\eta_{\mathrm{run}} \in [0,1].
-$$
-
-Let $\gamma_{\sigma}^{\mathrm{run}}$ be a smooth monotone map on $[0,1]$ such that
+Define a running support phase scalar
 
 $$
-\gamma_{\sigma}^{\mathrm{run}}(0)=0,
-\qquad
-\gamma_{\sigma}^{\mathrm{run}}(1)=1.
+\eta_{\sigma}^{\mathrm{run}} \in [0,1]
 $$
 
-Then define
+from a running-appropriate state quantity such as pelvis progression, stance compression-release progression, or a mixed running-support state.
+
+Let
 
 $$
-\sigma = L_{\mathrm{toe}}\,\gamma_{\sigma}^{\mathrm{run}}(\eta_{\mathrm{run}}).
+\Gamma_{\sigma}^{\mathrm{run}} : [0,1] \to [-L_{\mathrm{heel}}, L_{\mathrm{toe}}]
 $$
 
-The exact choice of $\eta_{\mathrm{run}}$ may later be tied to stance compression and fore-aft support progression.
+be a smooth monotone nondecreasing map.
 
-The important point is that $\sigma$ remains an explicit state variable in running too.
+Then the canonical running support law is
+
+$$
+\sigma = \Gamma_{\sigma}^{\mathrm{run}}\bigl(\eta_{\sigma}^{\mathrm{run}}\bigr).
+$$
+
+The running map should generally be more forefoot-biased than the walking one.
 
 ## 10. Takeoff condition
 
-Running differs from walking because stance ends in flight, not in a standard walking transfer phase.
+Running differs from walking because stance ends in flight, not in a standard walking load-acceptance transfer.
 
 Therefore takeoff must be an explicit mode transition.
 
@@ -359,6 +412,8 @@ This means:
 - support has progressed sufficiently toward the forefoot,
 - stance is ready to release contact.
 
+The precise threshold values may later be refined, but the architectural meaning is fixed here.
+
 ## 11. Flight phase
 
 ### 11.1. Flight dynamics
@@ -377,10 +432,10 @@ During flight:
 
 - there is no active support point,
 - there is no active support tangent or normal,
-- the previous takeoff support may still be stored for continuity,
-- the predicted touchdown support may be used by reconstruction and planning.
+- the last takeoff support frame may still be stored for continuity,
+- the predicted touchdown support frame may be used by reconstruction and planning.
 
-This is why the clean reconstruction document introduced a reconstruction-forward tangent separate from the active support tangent.
+This is one reason why the reconstruction document uses a reconstruction-forward tangent separate from the active support tangent.
 
 ## 12. Touchdown after flight
 
@@ -391,18 +446,24 @@ A touchdown is valid only if all the following hold.
 1. The swing ankle reaches the planned touchdown location up to tolerance:
 
 $$
-\|A_{\mathrm{sw}}(t_{\mathrm{td}}) - A_{\mathrm{next}}^{\star}\| \le \varepsilon_A.
+\|A_{\mathrm{sw}}(t_{\mathrm{td}}) - A_{\mathrm{next}}\| \le \varepsilon_A.
 $$
 
-2. The future foot geometry is admissible on the terrain.
-
-3. The new stance leg is rigidly reconstructible:
+2. The future foot geometry is admissible on the terrain over the full interval
 
 $$
-\|P_{\mathrm{td}} - A_{\mathrm{next}}^{\star}\| \le 2L.
+[-L_{\mathrm{heel}}, L_{\mathrm{toe}}].
 $$
 
-4. The new support frame is well defined.
+3. The future contact path is well defined.
+
+4. The new stance leg is rigidly reconstructible:
+
+$$
+\|P_{\mathrm{td}} - A_{\mathrm{next}}\| \le 2L.
+$$
+
+5. The new support frame is well defined.
 
 If these conditions hold, then
 
@@ -424,7 +485,7 @@ It should continuously deform at least:
 - the preferred step length,
 - the swing clearance,
 - the effective running stance reference,
-- touchdown tolerance or timing margins.
+- touchdown timing or viability margins.
 
 A first formal reactive compression law is
 
@@ -437,9 +498,7 @@ Thus strong perturbations allow a more crouched running stance.
 Likewise, the planning horizon may grow as
 
 $$
-\sigma_{\max}^{\mathrm{plan}}(\rho)
-=
-\sigma_{\max,0}^{\mathrm{plan}} + \rho\,\Delta \sigma_{\max}^{\mathrm{plan}}.
+\ell_{\max}^{\mathrm{plan}}(\rho) = \ell_{\max,0}^{\mathrm{plan}} + \rho\,\Delta \ell_{\max}^{\mathrm{plan}}.
 $$
 
 So recovery in running can emerge from the same architecture by allowing farther and larger steps.
@@ -457,21 +516,21 @@ $$
 At touchdown the new stance leg must satisfy
 
 $$
-\|P_{\mathrm{td}}-A_{\mathrm{next}}^{\star}\| \le 2L.
+\|P_{\mathrm{td}}-A_{\mathrm{next}}\| \le 2L.
 $$
 
 Thus running may change stance dynamics, but it never changes morphology.
 
 ## 15. Continuity with the same `CM-first` architecture
 
-The following objects remain unchanged across walking and running:
+The following objects remain shared across standing, walking, and running:
 
 - the authoritative CM $C$,
 - the rigid body geometry,
 - the exact leg IK,
 - the terrain geometry,
 - the ankle-based foot model,
-- the support-point geometry,
+- the support-path-based foot geometry,
 - the swing-generation architecture,
 - the body reconstruction architecture,
 - the reactive intensity variable $\rho$.
@@ -480,7 +539,8 @@ What changes is:
 
 - the hybrid mode set,
 - the stance law,
-- the presence of flight,
+- the role of bilateral support,
+- the presence or absence of flight,
 - the event structure of takeoff and touchdown.
 
 This is exactly the intended benefit of the `CM-first` design: stable global geometry, changing gait protocol.
@@ -488,26 +548,17 @@ This is exactly the intended benefit of the `CM-first` design: stable global geo
 ## 16. Main conclusions of this document
 
 1. Running must be a distinct hybrid protocol from walking.
-2. The same `CM-first` architecture can be preserved across both gaits.
-3. Running stance must be modeled by an effective spring-like compressed-leg law.
-4. Flight must exist explicitly and obey ballistic dynamics.
-5. Takeoff and touchdown are explicit mode transitions.
-6. The same geometric support objects remain meaningful in running stance.
-7. The same reactive intensity variable $\rho$ can organize running recovery as well.
+
+2. The same support-centered `CM-first` architecture is preserved across both gaits.
+
+3. Running stance must use the same path-based support geometry as the rest of the clean line.
+
+4. Running stance must be modeled by an effective spring-like compressed-leg law.
+
+5. Flight must exist explicitly and obey ballistic dynamics.
+
+6. Takeoff and touchdown are explicit mode transitions.
+
+7. The same reactive intensity variable $\rho$ can organize running recovery.
+
 8. Exact rigid-leg feasibility remains non-negotiable.
-
-## 17. Why this file can enter `docs_clean/`
-
-This document is stable enough for the clean line because:
-
-- its notation is coherent with the current clean documents,
-- it no longer relies on undefined symbols like an unexplained torso-force term,
-- it makes explicit what is fixed and what is deferred,
-- it preserves the same architectural backbone as the other clean documents.
-
-What is still intentionally deferred is not an inconsistency. It is the future work on:
-
-- gait transitions,
-- jump,
-- landing,
-- higher-energy touchdown capture.
