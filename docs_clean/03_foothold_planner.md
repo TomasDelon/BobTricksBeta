@@ -2,77 +2,91 @@
 
 ## 0. Goal of this document
 
-The goal of this document is to define the mathematical planner that selects the next stance ankle on a segmented terrain in a way consistent with the `CM-first` architecture.
+The goal of this document is to define the mathematical planner that selects the next support acquisition on a segmented terrain in a way consistent with the support-centered `CM-first` architecture.
 
 This document fixes:
 
-- the candidate terrain domain for the next ankle,
-- the exact distinction between ankle $A_{\mathrm{next}}$ and induced support objects,
-- the admissibility conditions of a candidate foothold on a polyline terrain,
-- the role of the predicted touchdown state,
-- the nominal step-length objective,
-- the capture-related quantities used to score candidates,
+- the interpretation of the foothold planner as a support-acquisition planner,
+- the exact planner output,
+- the terrain-following candidate domain for the future ankle,
+- the candidate-induced future foot and support geometry,
+- the role of candidate-conditioned prediction,
+- the exact admissibility conditions of a candidate,
+- the distinction between touchdown viability and load-acceptance viability,
+- the support-centered quantities used for candidate scoring,
+- the cost structure used to compare admissible candidates,
 - the reactive deformation of the same planner through $\rho$.
 
-This document remains a formal mathematical specification. It does not yet impose a particular discrete search algorithm or numerical implementation.
+This document remains a formal mathematical specification. It does not impose a particular discrete search algorithm or a particular numerical optimizer.
 
-## 1. Planning principle
+## 1. Planner interpretation
 
-The next foothold must not be chosen by a purely time-based oscillation and must not be reduced to a fixed horizontal step length.
+The foothold planner must no longer be understood as an isolated module that chooses a single ankle point in front of the body.
 
-The next foothold must be selected from:
+Under the present architecture, standing, gait initiation, support progression, and load acceptance are explicit parts of the locomotion state. Therefore the planner must be interpreted as a support-acquisition planner.
 
-- the current locomotion state,
-- the terrain geometry ahead in the facing direction,
-- the predicted state at touchdown,
-- the current reactive intensity $\rho$.
+Its role is not only to choose where the swing ankle should land. Its role is to propose a future contact that is simultaneously:
 
-The planner must satisfy two requirements at once.
+- geometrically admissible under the future foot,
+- reachable by the swing leg at touchdown,
+- compatible with the current support regime,
+- acceptable through a finite load-transfer phase,
+- coherent with the future support evolution of the same `CM-first` state.
 
-First, in nominal locomotion, it must produce economical, regular, geometrically coherent steps.
+Thus the planned object is a future support acquisition, not merely a target point in world space.
 
-Second, under perturbation, it must automatically allow larger, earlier, or more terrain-adaptive steps without changing the architecture.
+## 2. Planner output
 
-Therefore there is no separate planner called “normal stepping” and another called “recovery stepping”. Both must emerge from the same candidate set and the same cost structure, continuously deformed by $\rho$.
+### 2.1. The future ankle remains the geometric anchor
 
-## 2. What the planner selects
-
-### 2.1. The planned object is the next ankle
-
-The planned foothold is first of all an ankle point on the terrain:
+The future foothold remains anchored by a future ankle point
 
 $$
 A_{\mathrm{next}} \in \Gamma.
 $$
 
-This is the authoritative target for the swing ankle.
+The ankle remains the authoritative geometric target for the swing foot.
 
-### 2.2. The planner does not choose the support point directly
+### 2.2. The planner output is richer than the ankle alone
 
-The planner does not directly choose the effective support point $Q_{\mathrm{next}}$.
-
-Instead, the planner chooses the ankle $A_{\mathrm{next}}$, and from that ankle one later constructs:
-
-- the visible foot direction $f_{\mathrm{foot,next}}$,
-- the toe point $T_{c,\mathrm{next}}$,
-- the effective support point $Q_{\mathrm{next}}$,
-- the effective support tangent $t_{\mathrm{sup,next}}$,
-- the effective support normal $n_{\mathrm{sup,next}}$.
-
-This separation is essential because the leg anchors geometrically at the ankle, whereas balance and capture are better expressed relative to the effective support.
-
-## 3. Forward candidate domain on the terrain
-
-### 3.1. Forward terrain ray from the current stance ankle
-
-Let the current stance ankle be $A_{\mathrm{st}}$ and let the facing sign be $f \in \{-1,+1\}$.
-
-Let the terrain be parameterized by arc-length.
-
-Define the forward terrain path starting at the current stance ankle by
+The minimum planner output is the tuple
 
 $$
-\gamma_{A_{\mathrm{st}}}(\sigma), \qquad \sigma \ge 0,
+\mathcal{O}_{\mathrm{foot}} = \left(A_{\mathrm{next}}, \mathcal{W}_{\mathrm{td}}, \mathcal{V}_{\mathrm{td}}\right),
+$$
+
+where $\mathcal{W}_{\mathrm{td}}$ is a candidate touchdown window and $\mathcal{V}_{\mathrm{td}}$ is a viability certificate associated with that candidate.
+
+The meaning of these objects is the following.
+
+- $A_{\mathrm{next}}$ is the future ankle anchor.
+- $\mathcal{W}_{\mathrm{td}}$ encodes when touchdown is expected to occur.
+- $\mathcal{V}_{\mathrm{td}}$ certifies that touchdown and the subsequent support transfer are both viable.
+
+### 2.3. The planner does not choose the future support point directly
+
+The planner does not directly choose the future effective support point $Q_{\mathrm{next}}$.
+
+Instead, once $A_{\mathrm{next}}$ is proposed, one later constructs from it:
+
+- the future contact path $\chi_{\mathrm{next}}(\sigma)$,
+- the future visible foot direction $f_{\mathrm{foot,next}}$,
+- the future support point $Q_{\mathrm{next}}$,
+- the future support tangent $t_{\mathrm{sup,next}}$,
+- the future support normal $n_{\mathrm{sup,next}}$.
+
+This separation is essential. The leg anchors geometrically at the ankle, whereas balance, capture, and support transfer are better expressed relative to the effective support geometry.
+
+## 3. Terrain-following candidate domain
+
+### 3.1. Forward path from the current dominant support ankle
+
+Let the current dominant support ankle be $A_{\mathrm{st}}$.
+
+Let the terrain forward path in the current facing direction be parameterized by terrain arc-length:
+
+$$
+\gamma_{A_{\mathrm{st}}}(\ell), \qquad \ell \ge 0,
 $$
 
 with
@@ -81,187 +95,279 @@ $$
 \gamma_{A_{\mathrm{st}}}(0) = A_{\mathrm{st}}.
 $$
 
-Every candidate foothold is of the form
+Every future ankle candidate is of the form
 
 $$
-A(\sigma) = \gamma_{A_{\mathrm{st}}}(\sigma), \qquad \sigma \ge 0.
+A(\ell) = \gamma_{A_{\mathrm{st}}}(\ell).
 $$
 
-The scalar $\sigma$ is the terrain arc-length from the current stance ankle to the candidate ankle. On a segmented terrain, this is the natural step-length variable.
+The variable $\ell$ is the terrain arc-length from the current dominant support ankle to the candidate ankle. On segmented terrain, this is the correct step-length variable.
 
-### 3.2. Finite planning horizon
+### 3.2. Finite state-dependent search horizon
 
-The planner searches only over a finite forward terrain interval.
+The planner must search only over a finite terrain-following interval. A purely fixed planning horizon is not acceptable as the canonical law because terrain compensation and reactive stepping require the horizon to deform with the locomotion state.
 
-Define the planning set
-
-$$
-\Sigma_{\mathrm{plan}}(\rho) = [\sigma_{\min}^{\mathrm{plan}}, \sigma_{\max}^{\mathrm{plan}}(\rho)].
-$$
-
-The lower bound avoids degenerate tiny steps.
-
-The upper bound grows with reactivity:
+Define the candidate set of terrain abscissas by
 
 $$
-\sigma_{\max}^{\mathrm{plan}}(\rho)
-=
-\sigma_{\max,0}^{\mathrm{plan}} + \rho\,\Delta \sigma_{\max}^{\mathrm{plan}}.
+\Sigma_{\mathrm{plan}}(X, \rho, \mathcal{M}) = [\ell_{\min}^{\mathrm{plan}}, \ell_{\max}^{\mathrm{plan}}(X, \rho, \mathcal{M})].
 $$
 
-Thus stronger perturbations enlarge the accessible terrain horizon.
+The lower bound excludes degenerate tiny steps. The upper bound is allowed to depend on:
 
-## 4. Exact reachability at touchdown
+- the current support regime,
+- the current support progression state,
+- the reactive intensity $\rho$,
+- protocol-specific anticipation.
 
-### 4.1. Pelvis-based rigid reachability
-
-A candidate ankle is not acceptable unless it will be rigidly reachable at touchdown.
-
-Let $C_{\mathrm{td}}$ and $\theta_{\mathrm{td}}$ be the predicted CM and torso angle at touchdown.
-
-Define the predicted pelvis position by
+Thus the search domain is
 
 $$
-P_{\mathrm{td}} = C_{\mathrm{td}} - 0.75L e_{\theta_{\mathrm{td}}}.
+A(\ell), \qquad \ell \in \Sigma_{\mathrm{plan}}(X, \rho, \mathcal{M}).
 $$
 
-Then a candidate ankle $A_{\mathrm{next}}$ is exactly reachable if and only if
+## 4. Candidate-induced future foot geometry
+
+### 4.1. Future contact path under the foot
+
+For each candidate ankle $A_{\mathrm{next}}$, define the future local contact path under the foot by
 
 $$
-\|P_{\mathrm{td}} - A_{\mathrm{next}}\| \le 2L.
+\chi_{\mathrm{next}}(\sigma), \qquad \sigma \in [-L_{\mathrm{heel}}, L_{\mathrm{toe}}],
 $$
 
-This is a hard geometric condition.
-
-### 4.2. Preferred reach versus exact reach
-
-The exact rigid bound $2L$ must not be confused with the nominal preferred operating range.
-
-The hard condition is
+with
 
 $$
-\|P_{\mathrm{td}} - A_{\mathrm{next}}\| \le 2L.
+\chi_{\mathrm{next}}(0) = A_{\mathrm{next}}.
 $$
 
-But the planner may also prefer a narrower soft range. Define a preferred touchdown leg length by
+This object is the local support path induced by the terrain under the future foot.
 
-$$
-\ell_{\mathrm{pref}}(\rho) < 2L.
-$$
+### 4.2. Geometric admissibility of the future foot
 
-Then a soft reach penalty can later be built from the excess beyond $\ell_{\mathrm{pref}}(\rho)$ while still keeping $2L$ as the non-negotiable exact bound.
+A future ankle candidate is not admissible merely because it lies on the terrain. It must induce an admissible future foot geometry.
 
-## 5. Support objects induced by a candidate ankle
+A candidate foot geometry is admissible only if all the following hold.
 
-Given a candidate ankle $A_{\mathrm{next}}$, the terrain geometry ahead of that ankle in the facing direction induces the future foot and support objects.
+1. The full contact path exists over the active interval $[-L_{\mathrm{heel}}, L_{\mathrm{toe}}]$.
 
-### 5.1. Candidate toe point
+2. The path spans at most two admissible consecutive terrain segments.
 
-If the forward terrain path from $A_{\mathrm{next}}$ exists up to $L_{\mathrm{toe}}$, define
-
-$$
-T_{c,\mathrm{next}} = \gamma_{A_{\mathrm{next}}}(L_{\mathrm{toe}}).
-$$
-
-### 5.2. Candidate visible foot direction
-
-Define the future visible foot direction by
-
-$$
-f_{\mathrm{foot,next}} = \frac{T_{c,\mathrm{next}} - A_{\mathrm{next}}}{\|T_{c,\mathrm{next}} - A_{\mathrm{next}}\|}.
-$$
-
-This uses the ankle-to-toe mini-segment and not an artificial average of terrain angles.
-
-### 5.3. Candidate effective support geometry
-
-From the candidate foot geometry one then constructs:
-
-$$
-Q_{\mathrm{next}}, \qquad t_{\mathrm{sup,next}}, \qquad n_{\mathrm{sup,next}}.
-$$
-
-These are not independent decision variables. They are derived geometric objects induced by $A_{\mathrm{next}}$ and the local terrain configuration under the future foot.
-
-## 6. Geometric admissibility of a candidate foothold
-
-A candidate ankle is geometrically admissible only if the future foot geometry is itself admissible on the segmented terrain.
-
-A candidate ankle $A_{\mathrm{next}}$ is admissible only if all the following hold.
-
-1. The forward terrain path from $A_{\mathrm{next}}$ exists at least up to arc-length $L_{\mathrm{toe}}$.
-
-2. The future visible foot spans at most two consecutive terrain segments.
-
-3. If two segments are covered, the terrain angle jump under the foot satisfies
+3. If two terrain segments are covered, the angle variation along the active contact path satisfies
 
 $$
 \Delta \alpha_{\mathrm{foot}} \le \alpha_{\mathrm{foot}}^{\max}.
 $$
 
-4. The visible foot segment does not generate a forbidden terrain crossing.
+4. The resulting visible foot direction is facing-compatible.
 
-5. The visible foot is compatible with the facing direction:
+5. The future support frame can be constructed from the induced contact path.
 
-$$
-f\,(f_{\mathrm{foot,next}} \cdot e_X) > 0.
-$$
+### 4.3. Visible foot direction
 
-6. The induced support objects
+When the induced contact path is admissible, the future visible foot direction is derived from the future foot geometry. It is not an independent decision variable.
 
-$$
-Q_{\mathrm{next}}, \qquad t_{\mathrm{sup,next}}, \qquad n_{\mathrm{sup,next}}
-$$
-
-are well defined.
-
-If one of these conditions fails, the candidate is rejected before any dynamic score is computed.
-
-## 7. Predicted touchdown state
-
-The planner must evaluate candidates at predicted touchdown, not only from the instantaneous current state.
-
-Let $X_{\mathrm{now}}$ be the current locomotion state and let $t_{\mathrm{td}}$ be the predicted touchdown time associated with a candidate.
-
-Define the prediction operator by
+The candidate remains admissible only if
 
 $$
-X_{\mathrm{td}} = \Pi(t_{\mathrm{td}}; X_{\mathrm{now}}).
+f\,(f_{\mathrm{foot,next}} \cdot e_X) > 0,
 $$
 
-At minimum, the planner needs the predicted quantities
+where $f \in \{-1,+1\}$ is the facing sign.
+
+## 5. Candidate-conditioned prediction
+
+### 5.1. Prediction must be conditioned by the candidate
+
+The planner must evaluate a candidate foothold through candidate-conditioned prediction, not through a prediction independent of the candidate.
+
+Let the current locomotion state be $X_0$.
+
+For each candidate $A_{\mathrm{next}}$, define the candidate-conditioned hybrid prediction by
+
+$$
+X_{\mathrm{td}}(A_{\mathrm{next}}) = \Pi\bigl(t_{\mathrm{td}}(A_{\mathrm{next}}); X_0, A_{\mathrm{next}}\bigr),
+$$
+
+where the touchdown time is itself generated by the candidate-conditioned swing and support evolution.
+
+This prediction must propagate at least:
+
+- the active support state,
+- the current hybrid mode,
+- the swing geometry,
+- the future touchdown event,
+- the upcoming load-acceptance phase.
+
+### 5.2. Prediction failure rejects the candidate
+
+The predictor is allowed to return failure.
+
+If the candidate-conditioned predictor cannot produce a geometrically coherent touchdown state and a coherent post-touchdown support evolution, then the candidate must be rejected as non-viable.
+
+Formally, a failure of the form
+
+$$
+\Pi\bigl(t_{\mathrm{td}}(A_{\mathrm{next}}); X_0, A_{\mathrm{next}}\bigr) = FAIL(\mathrm{reason})
+$$
+
+removes the candidate from the admissible set.
+
+## 6. Exact touchdown viability
+
+### 6.1. Predicted pelvis state
+
+Let the candidate-conditioned predictor return a touchdown state containing in particular
 
 $$
 C_{\mathrm{td}}, \qquad \dot C_{\mathrm{td}}, \qquad \theta_{\mathrm{td}}.
 $$
 
-More refined implementations may include further predicted variables, but the formal planner is defined in terms of the touchdown state produced by $\Pi$.
+The predicted pelvis is then
 
-## 8. Candidate-local support coordinates at touchdown
+$$
+P_{\mathrm{td}} = C_{\mathrm{td}} - 0.75L e_{\theta_{\mathrm{td}}}.
+$$
 
-Once the candidate support objects are defined, the predicted CM can be written in the future support frame as
+### 6.2. Exact rigid-leg reachability
+
+A future candidate is exactly reachable at touchdown if and only if
+
+$$
+\|P_{\mathrm{td}} - A_{\mathrm{next}}\| \le 2L.
+$$
+
+This is a hard constraint. It is never softened by preference, by reactivity, or by the optimizer.
+
+A candidate violating this bound must be rejected before scoring.
+
+### 6.3. Soft reach penalty remains separate from exact reach
+
+The planner may discourage candidates too close to the rigid limit, but that preference must remain distinct from exact reachability.
+
+Define a preferred touchdown reach
+
+$$
+\ell_{\mathrm{pref}}(X, \rho, \mathcal{M}) < 2L.
+$$
+
+A soft reach penalty may then be built from the excess beyond $\ell_{\mathrm{pref}}$, while the exact bound $2L$ remains non-negotiable.
+
+## 7. Touchdown viability is not enough
+
+A candidate that is reachable at the touchdown instant is not automatically acceptable.
+
+The planner must also certify that the touchdown can be followed by a valid finite load-acceptance phase and by the transfer of support dominance toward the new foot.
+
+Thus the correct support sequence is
+
+$$
+\text{swing realization} \to \text{touchdown} \to \text{load acceptance} \to \text{new support dominance}.
+$$
+
+A candidate that satisfies immediate touchdown reachability but cannot pass through a valid bilateral acceptance phase must still be rejected or heavily penalized.
+
+## 8. Load-acceptance viability
+
+### 8.1. Support-transfer requirement
+
+Let the current dominant support foot be indexed by $b$ and the candidate future support foot by $f$.
+
+After touchdown, the system must admit a finite bilateral phase over an interval
+
+$$
+[t_{\mathrm{td}}, t_{\mathrm{dom}}], \qquad t_{\mathrm{dom}} > t_{\mathrm{td}},
+$$
+
+in which support dominance can move continuously from the old support toward the new one.
+
+### 8.2. Bilateral support frame during acceptance
+
+During this predicted bilateral phase, let
+
+$$
+Q_b(t), \qquad t_b(t)
+$$
+
+be the old-foot support point and tangent, and let
+
+$$
+Q_f(t), \qquad t_f(t)
+$$
+
+be the new-foot support point and tangent.
+
+The support-allocation law is represented by a variable
+
+$$
+\beta(t) \in [0,1].
+$$
+
+The effective bilateral support frame is then
+
+$$
+Q_{\beta}(t) = (1-\beta(t)) Q_b(t) + \beta(t) Q_f(t),
+$$
+
+$$
+t_{\beta}(t) = \frac{(1-\beta(t)) t_b(t) + \beta(t) t_f(t)}{\|(1-\beta(t)) t_b(t) + \beta(t) t_f(t)\|},
+$$
+
+provided the denominator is nonzero.
+
+A valid load-acceptance phase requires the existence of a continuous law $\beta(t)$ such that:
+
+1. $\beta(t_{\mathrm{td}})$ remains near the old-support side,
+2. $\beta(t_{\mathrm{dom}})$ reaches the new-support side,
+3. the effective bilateral support frame remains well defined,
+4. the CM/support evolution remains support-admissible throughout the interval.
+
+### 8.3. Definition of load-acceptance viability
+
+A candidate is load-acceptance viable if the predictor certifies the existence of such a finite bilateral transfer.
+
+If no valid support-transfer law exists after touchdown, then the candidate is not fully viable, even if the touchdown itself is reachable.
+
+## 9. Future support-centered quantities
+
+### 9.1. Future support point and support frame
+
+Suppose the candidate-conditioned prediction returns a valid future support coordinate initialization $\sigma_{\mathrm{next}}$ on the future contact path.
+
+Then the future support point is
+
+$$
+Q_{\mathrm{next}} = \chi_{\mathrm{next}}(\sigma_{\mathrm{next}}).
+$$
+
+The future support tangent is
+
+$$
+t_{\mathrm{sup,next}} = \frac{\partial_{\sigma} \chi_{\mathrm{next}}(\sigma_{\mathrm{next}})}{\|\partial_{\sigma} \chi_{\mathrm{next}}(\sigma_{\mathrm{next}})\|}.
+$$
+
+The future support normal is
+
+$$
+n_{\mathrm{sup,next}} = (-t_{{\mathrm{sup,next}},y}, t_{{\mathrm{sup,next}},x}).
+$$
+
+### 9.2. Support-centered and ankle-centered coordinates at touchdown
+
+The predicted CM decomposes in the future support frame as
 
 $$
 C_{\mathrm{td}} = Q_{\mathrm{next}} + s_{Q,\mathrm{next}} t_{\mathrm{sup,next}} + z_{Q,\mathrm{next}} n_{\mathrm{sup,next}}.
 $$
 
-Thus
-
-$$
-s_{Q,\mathrm{next}} = (C_{\mathrm{td}} - Q_{\mathrm{next}}) \cdot t_{\mathrm{sup,next}},
-$$
-
-$$
-z_{Q,\mathrm{next}} = (C_{\mathrm{td}} - Q_{\mathrm{next}}) \cdot n_{\mathrm{sup,next}}.
-$$
-
-Relative to the candidate ankle,
+It also decomposes relative to the future ankle as
 
 $$
 C_{\mathrm{td}} = A_{\mathrm{next}} + s_{A,\mathrm{next}} t_{\mathrm{sup,next}} + z_{A,\mathrm{next}} n_{\mathrm{sup,next}}.
 $$
 
-Thus
+Therefore
 
 $$
 s_{A,\mathrm{next}} = (C_{\mathrm{td}} - A_{\mathrm{next}}) \cdot t_{\mathrm{sup,next}},
@@ -271,13 +377,7 @@ $$
 z_{A,\mathrm{next}} = (C_{\mathrm{td}} - A_{\mathrm{next}}) \cdot n_{\mathrm{sup,next}}.
 $$
 
-If the induced support point is written as
-
-$$
-Q_{\mathrm{next}} = A_{\mathrm{next}} + \sigma_{\mathrm{next}} t_{\mathrm{sup,next}},
-$$
-
-then
+Since the ankle corresponds to $\sigma = 0$, one has
 
 $$
 s_{Q,\mathrm{next}} = s_{A,\mathrm{next}} - \sigma_{\mathrm{next}},
@@ -287,25 +387,27 @@ $$
 z_{Q,\mathrm{next}} = z_{A,\mathrm{next}}.
 $$
 
-This keeps explicit the same ankle-versus-support distinction already fixed in the walking document.
+This keeps explicit the same ankle-versus-support distinction used in the walking protocol.
 
-## 9. Candidate local capture quantity
+### 9.3. Candidate local capture quantity
 
-Define the candidate local tangential touchdown velocity by
+Define the tangential touchdown velocity by
 
 $$
 \dot s_{A,\mathrm{next}} = \dot C_{\mathrm{td}} \cdot t_{\mathrm{sup,next}}.
 $$
 
-Define the candidate local pendular frequency by
+Define the local support angle $\alpha_{\mathrm{sup,next}}$ from the future support tangent.
+
+Let $\bar z_{\mathrm{next}} > 0$ be a positive reference support-normal height.
+
+Then define
 
 $$
-\omega_{0,\mathrm{next}} = \sqrt{\frac{g\cos\alpha_{\mathrm{sup,next}}}{\bar z_{\mathrm{next}}}},
+\omega_{0,\mathrm{next}} = \sqrt{\frac{g \cos \alpha_{\mathrm{sup,next}}}{\bar z_{\mathrm{next}}}}.
 $$
 
-where $\alpha_{\mathrm{sup,next}}$ is the angle of $t_{\mathrm{sup,next}}$ and $\bar z_{\mathrm{next}} > 0$ is a positive reference support-normal height.
-
-Then define the candidate XCoM-like quantity by
+A support-centered XCoM-like quantity is then
 
 $$
 \xi_{\mathrm{next}} = s_{Q,\mathrm{next}} + \lambda \frac{\dot s_{A,\mathrm{next}}}{\omega_{0,\mathrm{next}}},
@@ -317,318 +419,234 @@ $$
 0 < \lambda \le 1.
 $$
 
-This quantity is not the whole planner. It is one useful signal that estimates how well the predicted state is captured by the future support.
+This quantity is useful, but it is not the whole planner.
 
-## 10. Candidate support interval and capture defect
+### 9.4. Future support interval and capture defect
 
-At the current stage of the project, the support interval of the future foot relative to the ankle is
-
-$$
-\mathcal{I}_{\mathrm{foot,next}} = [0, L_{\mathrm{toe}}],
-$$
-
-because $L_{\mathrm{heel}} = 0$.
-
-Relative to the induced support point
+Relative to the future ankle, the active foot interval is
 
 $$
-Q_{\mathrm{next}} = A_{\mathrm{next}} + \sigma_{\mathrm{next}} t_{\mathrm{sup,next}},
+[-L_{\mathrm{heel}}, L_{\mathrm{toe}}].
 $$
 
-the same interval becomes
+Relative to the future support point $Q_{\mathrm{next}} = \chi_{\mathrm{next}}(\sigma_{\mathrm{next}})$, the same interval becomes
 
 $$
-\mathcal{I}_{Q,\mathrm{next}} = [-\sigma_{\mathrm{next}}, L_{\mathrm{toe}} - \sigma_{\mathrm{next}}].
+\mathcal{I}_{Q,\mathrm{next}} = [-L_{\mathrm{heel}} - \sigma_{\mathrm{next}}, L_{\mathrm{toe}} - \sigma_{\mathrm{next}}].
 $$
 
-Define the distance-to-interval function by
+Let $d_{\mathcal{I}}(x, I)$ denote the distance from a scalar $x$ to an interval $I$.
+
+The candidate capture defect is then
 
 $$
-d_{\mathcal{I}}(x,[a,b]) =
-\left\{
-\begin{array}{ll}
-a-x & \text{if } x<a, \\
-0 & \text{if } a \le x \le b, \\
-x-b & \text{if } x>b.
-\end{array}
-\right.
+D_{\mathrm{cap}}(A_{\mathrm{next}}) = d_{\mathcal{I}}\bigl(\xi_{\mathrm{next}}, \mathcal{I}_{Q,\mathrm{next}}\bigr).
 $$
 
-Then define the candidate capture defect by
+## 10. Cost terms
+
+### 10.1. Step-length objective
+
+The natural terrain-based step length is
 
 $$
-D_{\mathrm{cap}}(A_{\mathrm{next}})
-=
-d_{\mathcal{I}}\bigl(\xi_{\mathrm{next}}, \mathcal{I}_{Q,\mathrm{next}}\bigr).
+\ell(A_{\mathrm{next}}).
 $$
 
-This quantity vanishes when the local capture quantity lies inside the future support interval.
-
-## 11. Nominal terrain-based step length objective
-
-### 11.1. Terrain step length
-
-For a candidate ankle $A_{\mathrm{next}} = \gamma_{A_{\mathrm{st}}}(\sigma)$, the natural step length is exactly the terrain abscissa
+The planner should prefer a protocol-dependent target step length
 
 $$
-\sigma(A_{\mathrm{next}}).
+\ell_{\mathrm{step}}^{\star}(X, \rho, \mathcal{M}).
 $$
 
-This is preferable to world-horizontal distance because the terrain is segmented and may contain slope changes or steps.
-
-### 11.2. Nominal target step length
-
-Let the nominal target step length be
+Define the step-length deviation cost by
 
 $$
-\sigma_{\mathrm{step}}^{\star}(\rho).
+D_{\ell}(A_{\mathrm{next}}; X, \rho, \mathcal{M}) = \bigl(\ell(A_{\mathrm{next}}) - \ell_{\mathrm{step}}^{\star}(X, \rho, \mathcal{M})\bigr)^2.
 $$
 
-A simple reactive law is
+### 10.2. Terrain height-change cost
 
-$$
-\sigma_{\mathrm{step}}^{\star}(\rho)
-=
-\sigma_{\mathrm{step},0}^{\star} + \rho\,\Delta \sigma_{\mathrm{step}}^{\star}.
-$$
-
-Then define the step-length penalty by
-
-$$
-D_{\mathrm{step}}(A_{\mathrm{next}};\rho)
-=
-\left(\sigma(A_{\mathrm{next}}) - \sigma_{\mathrm{step}}^{\star}(\rho)\right)^2.
-$$
-
-Thus longer recovery steps emerge continuously as $\rho$ increases.
-
-## 12. Terrain transition costs
-
-### 12.1. Height change cost
-
-Define the ankle height change by
+Define the candidate height change by
 
 $$
 \Delta h(A_{\mathrm{next}}) = (A_{\mathrm{next}} - A_{\mathrm{st}}) \cdot e_Y.
 $$
 
-A simple nominal penalty is
+Then define
 
 $$
-D_h(A_{\mathrm{next}}) = \left(\Delta h(A_{\mathrm{next}})\right)^2.
+D_h(A_{\mathrm{next}}) = \Delta h(A_{\mathrm{next}})^2.
 $$
 
-This does not forbid step-up or step-down events. It only penalizes unnecessary vertical excursions in nominal locomotion.
+### 10.3. Support-angle transition cost
 
-### 12.2. Slope transition cost
+Let $\alpha_{\mathrm{sup,current}}$ be the current dominant-support angle and let $\alpha_{\mathrm{sup,next}}$ be the future support angle induced by the candidate.
 
-Let $\alpha_{\mathrm{sup}}$ be the current support slope angle.
-
-Let $\alpha_{\mathrm{sup,next}}$ be the future support slope angle induced by the candidate foothold.
-
-Define the slope-transition penalty
+Define
 
 $$
-D_{\alpha}(A_{\mathrm{next}})
-=
-\left(\alpha_{\mathrm{sup,next}} - \alpha_{\mathrm{sup}}\right)^2.
+D_{\alpha}(A_{\mathrm{next}}) = \bigl(\alpha_{\mathrm{sup,next}} - \alpha_{\mathrm{sup,current}}\bigr)^2.
 $$
 
-Again, this is a preference, not a prohibition.
+### 10.4. Timing mismatch cost
 
-## 13. Touchdown-time compatibility
+Let the candidate-conditioned predictor return a touchdown time $t_{\mathrm{td}}(A_{\mathrm{next}})$.
 
-The planner must remain compatible with the swing generator.
-
-Let the touchdown time associated with a candidate be
+Let the protocol-dependent target touchdown time be
 
 $$
-t_{\mathrm{td}}(A_{\mathrm{next}}).
+t_{\mathrm{td}}^{\star}(X, \rho, \mathcal{M}).
 $$
 
-Let the nominal touchdown-time target be
+Define
 
 $$
-t_{\mathrm{td}}^{\star}(\rho).
+D_t(A_{\mathrm{next}}; X, \rho, \mathcal{M}) = \bigl(t_{\mathrm{td}}(A_{\mathrm{next}}) - t_{\mathrm{td}}^{\star}(X, \rho, \mathcal{M})\bigr)^2.
 $$
 
-Then a timing penalty is
-
-$$
-D_t(A_{\mathrm{next}};\rho)
-=
-\left(t_{\mathrm{td}}(A_{\mathrm{next}}) - t_{\mathrm{td}}^{\star}(\rho)\right)^2.
-$$
-
-This term expresses compatibility with the current swing evolution without splitting planning and swing into unrelated systems.
-
-## 14. Soft reach penalty
-
-Besides the exact hard bound, the planner may discourage candidates that require a touchdown leg too close to the geometric limit.
+### 10.5. Soft reach cost
 
 Define the soft reach penalty by
 
 $$
-D_{\mathrm{IK}}(A_{\mathrm{next}};\rho)
-=
-\left(
-\max\left\{0, \|P_{\mathrm{td}} - A_{\mathrm{next}}\| - \ell_{\mathrm{pref}}(\rho)\right\}
-\right)^2.
+D_{\mathrm{IK}}(A_{\mathrm{next}}; X, \rho, \mathcal{M}) = \Bigl(\max\bigl\{0, \|P_{\mathrm{td}} - A_{\mathrm{next}}\| - \ell_{\mathrm{pref}}(X, \rho, \mathcal{M})\bigr\}\Bigr)^2.
 $$
 
-This term is zero in the preferred operating range and positive only when the candidate pushes the touchdown geometry toward the exact rigid boundary.
+### 10.6. Load-acceptance difficulty cost
 
-## 15. Admissible candidate set
+The support-centered framework requires a specific cost term associated with post-touchdown support transfer.
 
-Define the admissible candidate set by
-
-$$
-\mathcal{A}(\rho)
-=
-\left\{
-A(\sigma) : \sigma \in \Sigma_{\mathrm{plan}}(\rho), \ A(\sigma) \text{ is geometrically admissible}, \ \|P_{\mathrm{td}} - A(\sigma)\| \le 2L
-\right\}.
-$$
-
-This expression separates three logically different layers:
-
-1. the forward terrain search domain,
-2. the foot and support admissibility constraints,
-3. the exact rigid reachability constraint.
-
-That separation is important both mathematically and for future implementation.
-
-## 16. Full candidate cost
-
-Among admissible candidates, define the total foothold cost by
+Define
 
 $$
-J(A_{\mathrm{next}};\rho)
-=
-w_{\mathrm{cap}}(\rho) D_{\mathrm{cap}}
-+
-w_{\mathrm{step}}(\rho) D_{\mathrm{step}}
-+
-w_h(\rho) D_h
-+
-w_{\alpha}(\rho) D_{\alpha}
-+
-w_t(\rho) D_t
-+
-w_{\mathrm{IK}}(\rho) D_{\mathrm{IK}}.
+D_{\mathrm{acc}}(A_{\mathrm{next}})
 $$
 
-The selected foothold is then
+as the predicted difficulty of passing from old support dominance to new support dominance after touchdown.
+
+This term must depend on the predicted bilateral support geometry and may increase, for example, when:
+
+- the old and new support points are badly arranged,
+- the support-angle discontinuity is too large,
+- the required progression of $\beta$ is too abrupt,
+- the candidate produces an excessive support-reorganization burden.
+
+If the predicted load-acceptance phase is impossible, then the candidate is not admissible. If it is possible but poor, then $D_{\mathrm{acc}}$ must be large.
+
+## 11. Admissible candidate set
+
+A candidate ankle $A_{\mathrm{next}}$ is admissible only if all the following hold.
+
+1. It lies in the terrain-forward search set.
+
+2. It induces an admissible future contact path over the full heel-to-toe interval.
+
+3. The candidate-conditioned predictor returns a coherent touchdown state.
+
+4. Exact rigid-leg reachability holds:
 
 $$
-A_{\mathrm{next}}^{\star}
-=
-\arg\min_{A \in \mathcal{A}(\rho)} J(A;\rho).
+\|P_{\mathrm{td}} - A_{\mathrm{next}}\| \le 2L.
 $$
 
-## 17. Nominal versus reactive planning
+5. A valid finite load-acceptance phase exists after touchdown.
 
-The planner is one and the same, but its horizon, targets, and weights vary continuously with $\rho$.
+6. The candidate is compatible with the current support regime and side choice.
 
-### 17.1. Nominal regime
-
-When $\rho$ is small:
-
-- the planning horizon is moderate,
-- the preferred step length remains near its nominal value,
-- terrain elegance matters,
-- the planner favors regular capture-compatible steps.
-
-### 17.2. Reactive regime
-
-When $\rho$ increases:
-
-- the planning horizon expands,
-- the preferred step length increases,
-- timing flexibility increases,
-- capture and reachability become more dominant,
-- terrain elegance may be relatively de-emphasized.
-
-A simple formal example is
+Define the admissible set by
 
 $$
-w_{\mathrm{cap}}(\rho) = w_{\mathrm{cap},0} + \rho\,\Delta w_{\mathrm{cap}},
+\mathcal{A}(X, \rho, \mathcal{M}) = \left\{A(\ell) : \ell \in \Sigma_{\mathrm{plan}}(X, \rho, \mathcal{M}), \ A(\ell) \text{ satisfies all admissibility conditions above} \right\}.
 $$
 
-$$
-w_h(\rho) = w_{h,0} - \rho\,\Delta w_h.
-$$
+## 12. Full planner cost
 
-Thus recovery stepping is not a separate architecture. It is the same planner under a different reactive deformation.
-
-## 18. Compatibility with walk, swing, and run
-
-### 18.1. Compatibility with walking
-
-The present foothold planner is directly compatible with the walking protocol because it uses the same explicit distinction between ankle and effective support, the same local support coordinates, and the same reactive intensity $\rho$.
-
-### 18.2. Compatibility with the swing generator
-
-The planner does not itself realize the step. It proposes
+Among admissible candidates, define the support-centered planner cost by
 
 $$
-A_{\mathrm{next}}^{\star}.
+J(A_{\mathrm{next}}) = w_{\mathrm{cap}} D_{\mathrm{cap}} + w_{\ell} D_{\ell} + w_h D_h + w_{\alpha} D_{\alpha} + w_{\mathrm{acc}} D_{\mathrm{acc}} + w_t D_t + w_{\mathrm{IK}} D_{\mathrm{IK}}.
 $$
 
-The swing generator must then realize a full-foot collision-free ankle transfer toward that target while preserving touchdown viability.
+The selected future support acquisition is then
 
-### 18.3. Compatibility with running
+$$
+A_{\mathrm{next}}^{\star} = \arg\min_{A \in \mathcal{A}(X, \rho, \mathcal{M})} J(A).
+$$
 
-The planner is also compatible with the running protocol at the architectural level.
+The weights may depend on $X$, $\rho$, and $\mathcal{M}$, but the hard admissibility constraints do not.
 
-What changes in running is not the existence of the planner as such, but mainly:
+## 13. Coupling with gait initiation and side choice
+
+The planner must remain compatible with standing and gait initiation.
+
+If the gait-initiation phase has already selected the future swing side, then the foothold search must be restricted to that side.
+
+If the gait-initiation phase is not yet committed, then side choice and foothold choice must not be treated as unrelated decisions. They must be coupled either jointly or through a clear sequential logic.
+
+Thus the planner cannot be interpreted as a side-blind ankle selector.
+
+## 14. Protocol awareness and reactivity
+
+The planner is one and the same across nominal and reactive conditions, but its horizon, targets, and weights may deform with the locomotion state.
+
+### 14.1. Nominal regime
+
+In nominal walking, the planner should favor:
+
+- regular terrain-following step lengths,
+- smooth support progression,
+- economical terrain transitions,
+- easy load acceptance.
+
+### 14.2. Reactive regime
+
+When $\rho$ increases, the planner may allow:
+
+- a larger search horizon,
+- larger target step lengths,
+- different touchdown timing preferences,
+- stronger emphasis on capture and support acquisition.
+
+However, reactivity may never legalize a candidate that violates exact morphology or admissible foot-contact geometry.
+
+## 15. Compatibility with the rest of the architecture
+
+### 15.1. Compatibility with the walking protocol
+
+The present planner is compatible with the walking protocol because it uses the same distinction between ankle and support variables, the same support-centered interpretation of touchdown, and the same explicit role of load acceptance.
+
+### 15.2. Compatibility with the swing generator
+
+The planner does not itself realize the motion. It proposes a future support acquisition. The swing generator must then realize a collision-free ankle transfer toward the planned candidate while preserving the viability assumptions used at planning time.
+
+### 15.3. Compatibility with later protocols
+
+The same planner architecture can later be reused in running, landing, crouching, or jump-related protocols. What changes is not the existence of the planner, but mainly:
 
 - the contact protocol,
-- the touchdown timing law,
-- the relative importance of the cost terms,
-- the admissible horizon and target step length under the running regime.
+- the timing laws,
+- the admissible horizon,
+- the relative importance of the cost terms.
 
-Thus the same `CM-first` foothold-planning structure can later be reused across gaits.
+## 16. Main conclusions of this document
 
-## 19. Touchdown viability after planning
+1. The foothold planner must be interpreted as a support-acquisition planner.
 
-Planning a foothold is not enough. The touchdown event must still be realizable.
+2. The future ankle remains the geometric anchor, but the planner output must be richer than the ankle alone.
 
-At touchdown, one must have at least:
+3. A candidate must induce an admissible future contact path over the full heel-to-toe interval.
 
-$$
-\|A_{\mathrm{sw}}(t_{\mathrm{td}}) - A_{\mathrm{next}}^{\star}\| \le \varepsilon_A,
-$$
+4. Candidate evaluation must be performed through candidate-conditioned prediction.
 
-$$
-\|P_{\mathrm{td}} - A_{\mathrm{next}}^{\star}\| \le 2L,
-$$
+5. Exact rigid-leg reachability at touchdown remains a hard constraint.
 
-and the future foot geometry induced by $A_{\mathrm{next}}^{\star}$ must remain admissible.
+6. Touchdown viability and load-acceptance viability are distinct notions.
 
-This makes explicit the distinction between:
+7. The support-centered quantities used for scoring must be defined relative to the future support state, not only relative to the ankle.
 
-- planning,
-- swing realization,
-- touchdown validation,
-- support transition.
+8. The planner cost must include a specific load-acceptance difficulty term $D_{\mathrm{acc}}$.
 
-## 20. Main conclusions of this document
+9. The planner must remain compatible with standing, gait initiation, walking, and later protocol extensions.
 
-1. The foothold planner must select the next ankle on the terrain polyline, not the toe and not the support point directly.
-2. A candidate foothold induces future foot and support objects that must be explicitly admissible.
-3. Candidate evaluation must be performed at predicted touchdown through the operator $\Pi$.
-4. Terrain arc-length is the natural step-length variable on segmented terrain.
-5. A local XCoM-like quantity is useful but is only one term of the full foothold score.
-6. Exact rigid reachability remains a hard geometric constraint.
-7. Recovery stepping must emerge from continuous deformation of the same planner through $\rho$.
-8. The planner must stay compatible with walking, swing realization, and later running reuse.
-
-## 21. What comes next
-
-The next clean documents should formalize at least one of the following extensions.
-
-- walk-to-run and run-to-walk transitions,
-- jump and intentional entry into flight,
-- landing and high-energy capture,
-- a more explicit common prediction layer shared across planners and gait protocols.
+10. Recovery stepping must emerge from continuous deformation of the same planner, not from a separate architecture.
